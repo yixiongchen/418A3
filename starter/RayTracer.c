@@ -19,6 +19,7 @@
 */
 
 #include "utils.h"
+#include <math.h>
 
 // A couple of global structures and data: An object list, a light list, and the
 // maximum recursion depth
@@ -119,7 +120,7 @@ void rtShade(struct object3D *obj, struct point3D *p, struct point3D *n, struct 
  // - The normal at the point
  // - The ray (needed to determine the reflection direction to use for the global component, as well as for
  //   the Phong specular component)
- // - The current racursion depth
+ // - The current recursion depth
  // - The (a,b) texture coordinates (meaningless unless texture is enabled)
  //
  // Returns:
@@ -152,6 +153,52 @@ void rtShade(struct object3D *obj, struct point3D *p, struct point3D *n, struct 
  // TO DO: Implement this function. Refer to the notes for
  // details about the shading model.
  //////////////////////////////////////////////////////////////
+ struct albedosPhong *alb =  obj->alb;
+ double ka = alb->ra;
+ double kd = alb->rd;
+ double ks = alb->rs;
+ struct point3D *V = ray3D->d;
+ //get incident light ray direction:
+ pointLS * source;
+ for(source = light_list; source != NULL ; source = source->next){
+  double alpha, theta, angle;
+  struct point3D *L = malloc();
+  struct point3D *R = malloc(); 
+  struct point3D *p0 = source->p0;
+  L->px = p->px - p0->px;
+  L->py = p->py - p0->py;
+  L->pz = p->pz - p0->pz;
+  L->pw = 1;
+ 
+  // calculate R
+  double num = 2* dot(L, n);
+  R->px = num * n->px - p0->px;
+  R->py = num * n->py - p0->py;
+  R->pz = num * n->pz - p0->pz;
+  R->pw = 1;
+  
+  //normalize
+  normalize(R);
+  normalize(L);
+  normalize(n);
+  
+  //calculate alpha for viewpoint ray and reflection ray
+  double norm_n = sqrt(pow(n->px,2) + pow(n->py,2) + pow(n->pz,2));
+  double norm_R = sqrt(pow(R->px,2) + pow(R->py,2) + pow(R->pz,2));
+  double norm_V = sqrt(pow(V->px,2) + pow(V->py,2) + pow(V->pz,2));
+  theta = acos(dot(n, R) / (norm_n * norm_R));
+  angle = acos(dot(n, V) / (norm_n * norm_V));
+  alpha = angle - theta;
+
+  
+  //calculate phong
+  max_one = max(0, dot(n, L));
+  max_two = max(0, pow(dot(V, R), alpha));
+
+  phong = ka*la + kd*max_one*ld + ks*max_two*ls
+
+ }
+
 
  // Be sure to update 'col' with the final colour computed here!
  return;
