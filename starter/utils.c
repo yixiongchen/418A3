@@ -71,7 +71,11 @@ inline void rayTransform(struct ray3D *ray_orig, struct ray3D *ray_transformed, 
  // TO DO: Complete this function
  ///////////////////////////////////////////
 
-//word to model
+ //word to model
+ memcpy(ray_transformed, ray_orig, sizeof(struct ray3D));
+ matVecMult(obj->T, &ray_transformed->p0);
+ matVecMult(obj->T, &ray_transformed->d);
+
 
  
 }
@@ -85,6 +89,9 @@ inline void normalTransform(struct point3D *n_orig, struct point3D *n_transforme
  ///////////////////////////////////////////
  // TO DO: Complete this function
  ///////////////////////////////////////////
+ memcpy(n_transformed, obj->Tinv, sizeof(struct point3D));
+ matMult(n_orig, n_transformed);
+
 }
 
 /////////////////////////////////////////////
@@ -182,11 +189,35 @@ void planeIntersect(struct object3D *plane, struct ray3D *ray, double *lambda, s
  // TO DO: Complete this function.
  /////////////////////////////////
 
+double com_lambda;
+//tranform to model object
+struct ray3D *ray_transformed = (struct ray3D*)malloc(sizeof(struct ray3D));
+rayTransform(ray, ray_transformed, plane);
+//get lambda
+com_lambda = -(ray_transformed->p0.pz)/(ray_transformed->d.pz);
+//lambda = &com_lambda;
 
+//compute the intersection point
+struct point3D inter_p;
+ray->raypos(ray,com_lambda,&inter_p);
 
+//compute normal point
+struct point3D* normal_p;
+normal_p = newPoint(0, 0, 1);
 
+//convert them to world coordinates now
+//intersection point
+matVecMult(plane->Tinv, &inter_p);
+//normal vector
+struct point3D *normal_trans = (struct point3D*)malloc(sizeof(struct point3D));
+normalTransform(normal_p, normal_trans, plane);
 
-
+//save each variable
+lambda = & com_lambda;
+p= &inter_p;
+n=normal_trans;
+a=NULL;
+b=NULL;
 
 }
 

@@ -156,29 +156,30 @@ void rtShade(struct object3D *obj, struct point3D *p, struct point3D *n, struct 
  
 
  //light source list
- pointLS * source;
+ pointLS *source;
  // loop over light in the scene
- for(source = light_list; source != NULL ;source = source->next){
+ for(source=light_list; source != NULL; source=source->next){
   //light source point
   struct point3D *p0 = source->p0;
   struct colourRGB lightcolor = source->col; 
 
-  //shadow ray create a ray from intersection to light
+  //create a shadow ray from intersection to light
   struct point3D *shadow_d = newPoint(p0->px - p->px, p0->py - p->py, p0->pz - p->pz);
   struct ray3D *shadowRay = newRay(p0, shadow_d);
 
-  //variable to indicate shadow ray intersection object
+  //variables to indicate object intersected by shadow ray
   double lambda;
   double a_tmp;
   double b_tmp;
   struct object3D *hit_obj;
   struct point3D p_tmp;
   struct point3D n_tmp;
-
-  findFirstHit(shadowRay, &lambda, obj, &hit_obj, &p_tmp, &n_tmp, &a_tmp, &b_tmp);
   
   //find intersection from intersection point to light
-  // there is no intersection in shadow ray path
+  findFirstHit(shadowRay, &lambda, obj, &hit_obj, &p_tmp, &n_tmp, &a_tmp, &b_tmp);
+  
+  
+  //there is no intersection in shadow ray path then compute color
   if (lambda <= 0){
     
     //get albedos a, d, s
@@ -192,49 +193,49 @@ void rtShade(struct object3D *obj, struct point3D *p, struct point3D *n, struct 
     double ls =lightcolor.B;
    
     //view point ray
-    struct point3D *V = -(ray3D->d);
+    struct point3D * V_direct = newPoint(-(ray->d.px), -(ray->d.py), -(ray->d.pz));
+    struct ray3D *V = newRay(p, V_direct);
+
     //incident light ray
-    struct point3D *L = (struct point3D*)malloc(sizeof(struct point3D));
-    //reflected light ray
-    struct point3D *R = (struct point3D*)malloc(sizeof(struct point3D)); 
-    L->px = p->px - p0->px;
-    L->py = p->py - p0->py;
-    L->pz = p->pz - p0->pz;
-    L->pw = 1;
-   
+    struct point3D * L_direct = newPoint(p->px - p0->px, p->py - p0->py, p->pz - p0->pz);
+    struct ray3D *L  = newRay(p0, L_direct);
+
+  
     // calculate R
-    double num = 2* dot(L, n);
-    R->px = num * n->px - L->px;
-    R->py = num * n->py - L->py;
-    R->pz = num * n->pz - L->pz;
-    R->pw = 1;
+    double num = 2* dot(L->d, n);
+    R_px = num * n->px - L->d.px;
+    R_py = num * n->py - L->d.py;
+    R_pz = num * n->pz - L->d.pz;
+
+
+    //reflected light ray
+    struct point3D * R_direct = newPoint(R_px, R_py, R_pz);
+    struct ray3D *R = newRay(p,R_direct);
     
     //normalize
-    normalize(R);
-    normalize(L);
+    normalize(R->d);
+    normalize(L->d);
     normalize(n);
     
     //calculate alpha for viewpoint ray and reflection ray
     double norm_n = sqrt(pow(n->px,2) + pow(n->py,2) + pow(n->pz,2));
-    double norm_R = sqrt(pow(R->px,2) + pow(R->py,2) + pow(R->pz,2));
-    double norm_V = sqrt(pow(V->px,2) + pow(V->py,2) + pow(V->pz,2));
-    double theta = acos(dot(n, R) / (norm_n * norm_R));
-    double angle = acos(dot(n, V) / (norm_n * norm_V));
+    double norm_R = sqrt(pow(R->d.px,2) + pow(R->d.py,2) + pow(R->d.pz,2));
+    double norm_V = sqrt(pow(V->d.px,2) + pow(V->d.py,2) + pow(V->d.pz,2));
+    double theta = acos(dot(n, R->d) / (norm_n * norm_R));
+    double angle = acos(dot(n, R->d) / (norm_n * norm_V));
     double alpha = angle - theta;
 
+
     //calculate phong
-    double max_one = max(0, dot(n, L));
-    double max_two = max(0, pow(dot(V, R), alpha));
+    double max_one = max(0, dot(n, L->d));
+    double max_two = max(0, pow(dot(V->d, R->d), alpha));
     double phong = ka*la + kd*max_one*ld + ks*max_two*ls;
 
     //update color
     temp.R += phong;
-    temp.R += phong;
-    temp.R += phong;
+    temp.G += phong;
+    temp.B += phong;
 
-    //free malloc;
-    free(L);
-    free(R);
   }
  }
 
@@ -300,15 +301,14 @@ void findFirstHit(struct ray3D *ray, double *lambda, struct object3D *Os, struct
     continue;
   }
 
-  //find the closest lambda;
+  //find the intersection object and get the lambda
   double lambda_tmp;
   struct point3D p_tmp;
   struct point3D n_tmp;
-  double a_tmp;
-  double b_tmp;
-  struct object3D obj_tmp;
+  double *a_tmp;
+  double *b_tmp;
 
-  object->intersect(&obj_tmp, ray, &lambda_tmp, &p_tmp, &n_tmp, &a_tmp, &b_tmp);
+  object->intersect(object, ray, &lambda_tmp, &p_tmp, &n_tmp, a_tmp, b_tmp);
   if((lambda_closest < 0 || lambda_tmp < lambda_closest) && (lambda_tmp > 0)){
 
     lambda_closest = lambda_tmp;
@@ -325,15 +325,13 @@ void findFirstHit(struct ray3D *ray, double *lambda, struct object3D *Os, struct
     //geth the normal at the intersection
     n= &n_tmp;
 
-    a = &a_tmp;
-    b = &b_tmp;
-
   }
-
  }
  return;
 
 }
+
+
 
 void rayTrace(struct ray3D *ray, int depth, struct colourRGB *col, struct object3D *Os)
 {
@@ -391,8 +389,6 @@ return;
 
 
 }
-
-
 
 
 
@@ -552,13 +548,14 @@ int main(int argc, char *argv[])
     struct point3D* origin = newPoint(0, 0, 0);
     struct point3D* imagePlane = newPoint((-sx/2 + i + 0.5),(-sx/2 + j + 0.5), -1);
     //Ray Direction
-    subVectors(imagePlane, origin);
+    subVectors(origin, imagePlane);
     direction = imagePlane;
     //Convert to world-space
     direction = matVecMult(cam->W2C, direction);
     origin = matVecMult(cam->W2C, origin);
     struct ray3D* ray = newRay(origin, direction);
     rayTrace(ray, 0, &col, NULL);
+
     //save color into image 
     im->rgbdata[(j*sx+i)*3] = col.R * 255;
     im->rgbdata[(j*sx+i)*3+1] = col.G * 255;
