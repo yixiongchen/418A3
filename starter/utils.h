@@ -23,6 +23,28 @@
 
 // Functions to apply transformations to objects.
 // If you add any transformations to the list below, document them carefully
+
+inline void matTranspose(double A[4][4], double B[4][4])
+{
+ // Performs matrix multiplication B=A*B (notice the result is left
+ // in B). This is so that we can compose transformations by
+ // premultiplying a given transformation matrix by one of our
+ // simple transformation matrices (rotate, translate, scale, etc).
+ // Note the indexing convention is [row][col]
+
+ double C[4][4];
+ int i,j,k;
+
+ memset(C,0,16*sizeof(double));
+ for (i=0;i<4;i++)
+  for (j=0;j<4;j++)
+   C[i][j]= A[j][i];
+
+ memcpy(B, C ,16*sizeof(double));
+}
+
+
+
 inline void matMult(double A[4][4], double B[4][4])
 {
  // Performs matrix multiplication B=A*B (notice the result is left
@@ -41,6 +63,7 @@ inline void matMult(double A[4][4], double B[4][4])
 
  memcpy(B,C,16*sizeof(double));
 }
+
 
 inline void matVecMult(double A[4][4], struct point3D *pt)
 {
@@ -133,7 +156,7 @@ inline double length(struct point3D *a)
 }
 
 // Functions to instantiate primitives
-struct point3D *newPoint(double px, double py, double pz);
+struct point3D *newPoint(double px, double py, double pz, double pw);
 struct pointLS *newPLS(struct point3D *p0, double r, double g, double b);
 
 // Ray management inlines

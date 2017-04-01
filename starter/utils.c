@@ -19,7 +19,7 @@ double eye4x4[4][4]={{1.0, 0.0, 0.0, 0.0},
 /////////////////////////////////////////////
 // Primitive data structure section
 /////////////////////////////////////////////
-struct point3D *newPoint(double px, double py, double pz)
+struct point3D *newPoint(double px, double py, double pz, double pw)
 {
  // Allocate a new point structure, initialize it to
  // the specified coordinates, and return a pointer
@@ -32,7 +32,7 @@ struct point3D *newPoint(double px, double py, double pz)
   pt->px=px;
   pt->py=py;
   pt->pz=pz;
-  pt->pw=1.0;
+  pt->pw=pw;
  }
  return(pt);
 }
@@ -72,10 +72,15 @@ inline void rayTransform(struct ray3D *ray_orig, struct ray3D *ray_transformed, 
  ///////////////////////////////////////////
 
  //word to model
- memcpy(ray_transformed, ray_orig, sizeof(struct ray3D));
- matVecMult(obj->T, &ray_transformed->p0);
- matVecMult(obj->T, &ray_transformed->d);
-
+ struct point3D p0;
+ struct point3D d;
+ memcpy(&p0, &ray_orig->p0, sizeof(struct point3D));
+ memcpy(&d, &ray_orig->d, sizeof(struct point3D));
+ matVecMult(obj->Tinv, &p0);
+ matVecMult(obj->Tinv, &d);
+ ray_transformed->p0= p0;
+ ray_transformed->d = d;
+ ray_transformed->rayPos = &rayPosition;
 
  
 }
@@ -89,8 +94,16 @@ inline void normalTransform(struct point3D *n_orig, struct point3D *n_transforme
  ///////////////////////////////////////////
  // TO DO: Complete this function
  ///////////////////////////////////////////
- memcpy(n_transformed, obj->Tinv, sizeof(struct point3D));
- matMult(n_orig, n_transformed);
+ 
+ // first do the transpose
+ 
+ double T[4][4];
+ memcpy(n_transformed, n_orig, sizeof(struct point3D) );
+
+ // do transpose
+ matTranspose(obj->Tinv, T);
+ //final transformation
+ matVecMult(T, n_transformed);
 
 }
 
@@ -193,31 +206,46 @@ double com_lambda;
 //tranform to model object
 struct ray3D *ray_transformed = (struct ray3D*)malloc(sizeof(struct ray3D));
 rayTransform(ray, ray_transformed, plane);
+
 //get lambda
 com_lambda = -(ray_transformed->p0.pz)/(ray_transformed->d.pz);
-//lambda = &com_lambda;
+if(com_lambda < 0 || ray_transformed->d.pz == 0 ){
+  //printf("t is < 0\n");
+  double lam = -1;
+  memcpy(lambda, &lam, sizeof(double));
+  return;
+}
 
-//compute the intersection point
-struct point3D inter_p;
-ray->raypos(ray,com_lambda,&inter_p);
 
+//compute the intersection point with lambda
+rayPosition(ray_transformed, com_lambda, p);
+//printf("x is %f, y is %f\n", p->px, p->py);
 //compute normal point
 struct point3D* normal_p;
-normal_p = newPoint(0, 0, 1);
+normal_p = newPoint(0, 0, 1, 0);
 
-//convert them to world coordinates now
-//intersection point
-matVecMult(plane->Tinv, &inter_p);
-//normal vector
-struct point3D *normal_trans = (struct point3D*)malloc(sizeof(struct point3D));
-normalTransform(normal_p, normal_trans, plane);
 
-//save each variable
-lambda = & com_lambda;
-p= &inter_p;
-n=normal_trans;
-a=NULL;
-b=NULL;
+if(p->px <= 1 && p->px >= -1 && p->py >= -1 && p->py <= 1){
+  //printf("enter this\n");
+  //convert them to world coordinates now
+  //intersection point
+  matVecMult(plane->T, p);
+  //normal vector
+  normalTransform(normal_p, n, plane);
+  //save each variable
+  memcpy(lambda, &com_lambda, sizeof(double));
+
+}
+
+else{
+  double lam = -1;
+  memcpy(lambda, &lam, sizeof(double));
+ 
+}
+
+free(&ray_transformed->p0);
+free(&ray_transformed->d);
+free(ray_transformed);
 
 }
 
@@ -230,6 +258,7 @@ void sphereIntersect(struct object3D *sphere, struct ray3D *ray, double *lambda,
  /////////////////////////////////
  // TO DO: Complete this function.
  /////////////////////////////////
+ 
 }
 
 void loadTexture(struct object3D *o, const char *filename)
