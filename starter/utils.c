@@ -70,6 +70,10 @@ inline void rayTransform(struct ray3D *ray_orig, struct ray3D *ray_transformed, 
  ///////////////////////////////////////////
  // TO DO: Complete this function
  ///////////////////////////////////////////
+
+//word to model
+
+ 
 }
 
 inline void normalTransform(struct point3D *n_orig, struct point3D *n_transformed, struct object3D *obj)
@@ -173,11 +177,19 @@ void planeIntersect(struct object3D *plane, struct ray3D *ray, double *lambda, s
 {
  // Computes and returns the value of 'lambda' at the intersection
  // between the specified ray and the specified canonical plane.
-
+ 
  /////////////////////////////////
  // TO DO: Complete this function.
  /////////////////////////////////
+
+
+
+
+
+
+
 }
+
 
 void sphereIntersect(struct object3D *sphere, struct ray3D *ray, double *lambda, struct point3D *p, struct point3D *n, double *a, double *b)
 {

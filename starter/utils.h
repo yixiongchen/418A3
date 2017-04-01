@@ -127,7 +127,7 @@ inline void subVectors(struct point3D *a, struct point3D *b)
 }
 
 inline double length(struct point3D *a)
-{
+{ 
  // Compute and return the length of a vector
  return(sqrt((a->px*a->px)+(a->py*a->py)+(a->pz*a->pz)));
 }

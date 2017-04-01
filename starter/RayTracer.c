@@ -19,6 +19,7 @@
 */
 
 #include "utils.h"
+#include <math.h>
 
 // A couple of global structures and data: An object list, a light list, and the
 // maximum recursion depth
@@ -119,7 +120,7 @@ void rtShade(struct object3D *obj, struct point3D *p, struct point3D *n, struct 
  // - The normal at the point
  // - The ray (needed to determine the reflection direction to use for the global component, as well as for
  //   the Phong specular component)
- // - The current racursion depth
+ // - The current recursion depth
  // - The (a,b) texture coordinates (meaningless unless texture is enabled)
  //
  // Returns:
@@ -152,9 +153,123 @@ void rtShade(struct object3D *obj, struct point3D *p, struct point3D *n, struct 
  // TO DO: Implement this function. Refer to the notes for
  // details about the shading model.
  //////////////////////////////////////////////////////////////
+ 
+
+ //light source list
+ pointLS * source;
+ // loop over light in the scene
+ for(source = light_list; source != NULL ;source = source->next){
+  //light source point
+  struct point3D *p0 = source->p0;
+  struct colourRGB lightcolor = source->col; 
+
+  //shadow ray create a ray from intersection to light
+  struct point3D *shadow_d = newPoint(p0->px - p->px, p0->py - p->py, p0->pz - p->pz);
+  struct ray3D *shadowRay = newRay(p0, shadow_d);
+
+  //variable to indicate shadow ray intersection object
+  double lambda;
+  double a_tmp;
+  double b_tmp;
+  struct object3D *hit_obj;
+  struct point3D p_tmp;
+  struct point3D n_tmp;
+
+  findFirstHit(shadowRay, &lambda, obj, &hit_obj, &p_tmp, &n_tmp, &a_tmp, &b_tmp);
+  
+  //find intersection from intersection point to light
+  // there is no intersection in shadow ray path
+  if (lambda <= 0){
+    
+    //get albedos a, d, s
+    struct albedosPhong *alb = obj->alb;
+    double ka = alb->ra;
+    double kd = alb->rd;
+    double ks = alb->rs;
+    //get light properties
+    double la =lightcolor.R;
+    double ld =lightcolor.G;
+    double ls =lightcolor.B;
+   
+    //view point ray
+    struct point3D *V = -(ray3D->d);
+    //incident light ray
+    struct point3D *L = (struct point3D*)malloc(sizeof(struct point3D));
+    //reflected light ray
+    struct point3D *R = (struct point3D*)malloc(sizeof(struct point3D)); 
+    L->px = p->px - p0->px;
+    L->py = p->py - p0->py;
+    L->pz = p->pz - p0->pz;
+    L->pw = 1;
+   
+    // calculate R
+    double num = 2* dot(L, n);
+    R->px = num * n->px - L->px;
+    R->py = num * n->py - L->py;
+    R->pz = num * n->pz - L->pz;
+    R->pw = 1;
+    
+    //normalize
+    normalize(R);
+    normalize(L);
+    normalize(n);
+    
+    //calculate alpha for viewpoint ray and reflection ray
+    double norm_n = sqrt(pow(n->px,2) + pow(n->py,2) + pow(n->pz,2));
+    double norm_R = sqrt(pow(R->px,2) + pow(R->py,2) + pow(R->pz,2));
+    double norm_V = sqrt(pow(V->px,2) + pow(V->py,2) + pow(V->pz,2));
+    double theta = acos(dot(n, R) / (norm_n * norm_R));
+    double angle = acos(dot(n, V) / (norm_n * norm_V));
+    double alpha = angle - theta;
+
+    //calculate phong
+    double max_one = max(0, dot(n, L));
+    double max_two = max(0, pow(dot(V, R), alpha));
+    double phong = ka*la + kd*max_one*ld + ks*max_two*ls;
+
+    //update color
+    temp.R += phong;
+    temp.R += phong;
+    temp.R += phong;
+
+    //free malloc;
+    free(L);
+    free(R);
+  }
+ }
+
+
+ // recrusion with depth
+ if (depth < MAX_DEPTH){
+  //reflectray  = reflectRay = create a reflected ray at the intersection;
+  struct point3D *New_Ray = (struct point3D*)malloc(sizeof(struct point3D));
+  struct point3D *Ray_d = ray3D->d;
+  normalize(Ray_d);
+  // calculate new reflective ray
+  double num = 2* dot(Ray_d, n);
+  New_Ray->px = num * n->px - Ray_d->px;
+  New_Ray->py = num * n->py - Ray_d->py;
+  New_Ray->pz = num * n->pz - Ray_d->pz;
+  New_Ray->pw = 1;
+  normalize(New_Ray);
+  
+  //increment on depth
+  depth += 1;
+  //call ray trace
+  struct colourRGB* recur_color;
+  rayTrace(New_Ray, depth, recur_color, obj);
+  temp.R += recur_color->R;
+  temp.G += recur_color->G;
+  temp.B += recur_color->B;
+  free(New_Ray);
+}
 
  // Be sure to update 'col' with the final colour computed here!
- return;
+col -> R = temp.R;
+col -> G = temp.G;
+col -> B = temp.B;
+
+return;
 
 }
 
@@ -175,6 +290,48 @@ void findFirstHit(struct ray3D *ray, double *lambda, struct object3D *Os, struct
  // TO DO: Implement this function. See the notes for
  // reference of what to do in here
  /////////////////////////////////////////////////////////////
+ double lambda_closest = -1;
+ struct object3D* object;
+ //loop over all objects in scene
+ for(object = object_list; object=object->next; object!=NULL){
+  
+  //ensure we don't return a self-intersection
+  if(object == Os){
+    continue;
+  }
+
+  //find the closest lambda;
+  double lambda_tmp;
+  struct point3D p_tmp;
+  struct point3D n_tmp;
+  double a_tmp;
+  double b_tmp;
+  struct object3D obj_tmp;
+
+  object->intersect(&obj_tmp, ray, &lambda_tmp, &p_tmp, &n_tmp, &a_tmp, &b_tmp);
+  if((lambda_closest < 0 || lambda_tmp < lambda_closest) && (lambda_tmp > 0)){
+
+    lambda_closest = lambda_tmp;
+    
+    // get the lamda
+    lambda = &lambda_closest;
+
+    //get the pointer to the object at the intersection
+    obj = &object;
+
+    //get intersection point
+    p = &p_tmp ;
+    
+    //geth the normal at the intersection
+    n= &n_tmp;
+
+    a = &a_tmp;
+    b = &b_tmp;
+
+  }
+
+ }
+ return;
 
 }
 
@@ -211,7 +368,36 @@ void rayTrace(struct ray3D *ray, int depth, struct colourRGB *col, struct object
  // TO DO: Complete this function. Refer to the notes
  // if you are unsure what to do here.
  ///////////////////////////////////////////////////////
+
+ //find the first hitted object in object_list
+findFirstHit(ray, &lambda, Os, &obj, &p, &n, &a, &b);
+ // intersection point exist
+if (lambda > 0):
+   // shading and phong
+  rtShade(obj, &p, &n, ray, depth, &a,  &b, &I);
+else{
+  //background color
+  I.R = 0;
+  I.G = 0;
+  I.B = 0;
 }
+
+//assign color to image
+col->R = I.R;
+col->G = I.G;
+col->B = I.B;
+
+return;
+
+
+}
+
+
+
+
+
+
+
 
 int main(int argc, char *argv[])
 {
@@ -362,6 +548,21 @@ int main(int argc, char *argv[])
     // TO DO - complete the code that should be in this loop to do the
     //         raytracing!
     ///////////////////////////////////////////////////////////////////
+    // Pixel in Camera Coordinates
+    struct point3D* origin = newPoint(0, 0, 0);
+    struct point3D* imagePlane = newPoint((-sx/2 + i + 0.5),(-sx/2 + j + 0.5), -1);
+    //Ray Direction
+    subVectors(imagePlane, origin);
+    direction = imagePlane;
+    //Convert to world-space
+    direction = matVecMult(cam->W2C, direction);
+    origin = matVecMult(cam->W2C, origin);
+    struct ray3D* ray = newRay(origin, direction);
+    rayTrace(ray, 0, &col, NULL);
+    //save color into image 
+    im->rgbdata[(j*sx+i)*3] = col.R * 255;
+    im->rgbdata[(j*sx+i)*3+1] = col.G * 255;
+    im->rgbdata[(j*sx+i)*3+2] = col.B * 255;
 
   } // end for i
  } // end for j
