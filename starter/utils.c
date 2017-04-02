@@ -8,6 +8,7 @@
 */
 
 #include "utils.h"
+#include "math.h"  
 
 // A useful 4x4 identity matrix which can be used at any point to
 // initialize or reset object transformations
@@ -76,6 +77,7 @@ inline void rayTransform(struct ray3D *ray_orig, struct ray3D *ray_transformed, 
  struct point3D d;
  memcpy(&p0, &ray_orig->p0, sizeof(struct point3D));
  memcpy(&d, &ray_orig->d, sizeof(struct point3D));
+
  matVecMult(obj->Tinv, &p0);
  matVecMult(obj->Tinv, &d);
  ray_transformed->p0= p0;
@@ -209,34 +211,33 @@ rayTransform(ray, ray_transformed, plane);
 
 //get lambda
 com_lambda = -(ray_transformed->p0.pz)/(ray_transformed->d.pz);
+
+// if there is no intersection 
 if(com_lambda < 0 || ray_transformed->d.pz == 0 ){
-  //printf("t is < 0\n");
   double lam = -1;
   memcpy(lambda, &lam, sizeof(double));
   return;
 }
 
-
 //compute the intersection point with lambda
 rayPosition(ray_transformed, com_lambda, p);
-//printf("x is %f, y is %f\n", p->px, p->py);
+
 //compute normal point
 struct point3D* normal_p;
 normal_p = newPoint(0, 0, 1, 0);
 
-
+// if intersection within x[1, -1] and y[1, -1]
 if(p->px <= 1 && p->px >= -1 && p->py >= -1 && p->py <= 1){
-  //printf("enter this\n");
-  //convert them to world coordinates now
-  //intersection point
+
+  //convert intersection point to world coordinates now
   matVecMult(plane->T, p);
   //normal vector
   normalTransform(normal_p, n, plane);
-  //save each variable
+  //store lambda
   memcpy(lambda, &com_lambda, sizeof(double));
 
 }
-
+//if intersection is out of plane
 else{
   double lam = -1;
   memcpy(lambda, &lam, sizeof(double));
@@ -246,6 +247,7 @@ else{
 free(&ray_transformed->p0);
 free(&ray_transformed->d);
 free(ray_transformed);
+
 
 }
 
@@ -258,6 +260,81 @@ void sphereIntersect(struct object3D *sphere, struct ray3D *ray, double *lambda,
  /////////////////////////////////
  // TO DO: Complete this function.
  /////////////////////////////////
+double com_lambda;
+double t1;
+double t2;
+//tranform to model object
+struct ray3D *ray_transformed = (struct ray3D*)malloc(sizeof(struct ray3D));
+rayTransform(ray, ray_transformed, sphere);
+
+
+//quadratic equation parameter
+double A = dot(&ray_transformed->d, &ray_transformed->d);
+double B = 2*dot(&ray_transformed->d, &ray_transformed->p0);
+double C = dot(&ray_transformed->p0, &ray_transformed->p0);
+printf("A is %f\n", A);
+printf("A is %f\n", B);
+printf("A is %f\n", C);
+
+if (A == 0){
+  com_lambda = -1;
+  memcpy(lambda, &com_lambda, sizeof(double));
+  return;
+}
+else if(sqrt(pow(B, 2) - (4*A*C)) < 0){
+  com_lambda = -1;
+  memcpy(lambda, &com_lambda, sizeof(double));
+  return;
+}
+else{
+  //compute lambda
+  t1 = (-B - sqrt(B*B - (4*A*C))) / (2*A);
+  t2 = (-B + sqrt(B*B - (4*A*C))) / (2*A);
+  printf("t1 is %f\n", t1);
+  printf("t2 is %f\n", t2);
+  //choose first hit
+  if (t1 > 0 && t2 >0){
+
+    com_lambda = t1;
+  }
+  else{
+    com_lambda = max(t1, t2);
+  }
+   
+  // if there is not intersection
+  if(com_lambda < 0){
+    com_lambda = -1;
+    memcpy(lambda, &com_lambda, sizeof(double));
+    return;
+  }
+  
+  //printf("lambda is %f\n",com_lambda);
+
+  //compute the intersection point with lambda
+  rayPosition(ray_transformed, com_lambda, p);
+
+  //compute normal point
+  struct point3D* normal_p;
+  normal_p = newPoint(p->px, p->py, p->pz, 0);
+
+  //convert intersection point to world coordinates now
+  matVecMult(sphere->T, p);
+  //normal vector
+  normalTransform(normal_p, n, sphere);
+  //store lambda
+  memcpy(lambda, &com_lambda, sizeof(double));
+
+  free(&ray_transformed->p0);
+  free(&ray_transformed->d);
+  free(ray_transformed);
+
+
+}
+
+
+
+
+
  
 }
 
