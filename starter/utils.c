@@ -85,14 +85,6 @@ inline void rayTransform(struct ray3D *ray_orig, struct ray3D *ray_transformed, 
  ray_transformed->d = d;
  ray_transformed->rayPos = &rayPosition;
 
- // memcpy(&ray_transformed->p0, &ray_orig->p0, 4*sizeof(double));
- // matVecMult(obj->Tinv, &ray_transformed->p0);
-
- // memcpy(&ray_transformed->d, &ray_orig->d, 4*sizeof(double));
- // matVecMult(obj->Tinv, &ray_transformed->d);
-
- // ray_transformed->rayPos =&rayPosition;
-
  
 }
 
@@ -115,14 +107,6 @@ inline void normalTransform(struct point3D *n_orig, struct point3D *n_transforme
  //final transformation 
  matVecMult(T, n_transformed);
 
-
- // //zeng
- //  double T_inv_trans[4][4];
- //  memcpy(T_inv_trans, obj->Tinv, 16*sizeof(double));
- //  matTranspose(T_inv_trans);
-
- //  memcpy(n_transformed, n_orig, 4*sizeof(double));
- //  matVecMult(T_inv_trans, n_transformed);
 
 }
 
@@ -226,7 +210,7 @@ void planeIntersect(struct object3D *plane, struct ray3D *ray, double *lambda, s
 
 double com_lambda;
 struct point3D* intersect_p = (struct point3D*)malloc(sizeof(struct point3D));
-struct point3D* normal_p = (struct point3D*)malloc(sizeof(struct point3D));
+struct point3D* n_p = (struct point3D*)malloc(sizeof(struct point3D));
 //tranform to model object
 struct ray3D *ray_transformed = (struct ray3D*)malloc(sizeof(struct ray3D));
 rayTransform(ray, ray_transformed, plane);
@@ -239,9 +223,6 @@ if(com_lambda < 0 || ray_transformed->d.pz == 0 ){
    com_lambda = -1;
    memcpy(lambda, &com_lambda, sizeof(double));
 }
-
-
-
 
 // if there is a intersection
 else{
@@ -269,8 +250,8 @@ else{
     matVecMult(plane->T, intersect_p);
     memcpy(p, intersect_p, sizeof(struct point3D));
     //normal vector
-    normalTransform(normal_p, normal_p, plane);
-    memcpy(n, normal_p, sizeof(struct point3D));
+    normalTransform(normal_p, n_p, plane);
+    memcpy(n, n_p, sizeof(struct point3D));
     //store lambda
     memcpy(lambda, &com_lambda, sizeof(double));
   }
@@ -280,6 +261,9 @@ else{
     memcpy(lambda, &com_lambda, sizeof(double));
   }
 }
+
+free(intersect_p);
+free(n_p);
 
 }
 
@@ -351,38 +335,7 @@ else{
   matVecMult(sphere->T, p);
   //normal vector
   normalTransform(normal_p, n, sphere);
-
 }
-
-  // struct point3D *ray_transformed_p0 = newPoint(0, 0, 0, 1);
-  // struct point3D *ray_transformed_d = newPoint(0, 0, 0, 0);
-  // struct ray3D *ray_transformed = newRay(ray_transformed_p0, ray_transformed_d);
-  // rayTransform(ray, ray_transformed, sphere);
-
-  // double t, t1,t2, A, B, C;
-
-  // A= dot(&ray_transformed->d, &ray_transformed->d);
-  // B= 2 * dot(&ray_transformed->d, &ray_transformed->p0);
-  // C =dot(&ray_transformed->p0, &ray_transformed->p0) -1;
-
-  // t =(-B - sqrt(B*B - 4*A *C)) /(2 *A);
-
-  // if( t < 0 || A ==0 ||  B * B - 4*A*C < 0){
-  //   t =-1;
-  //   memcpy(lambda, &t, sizeof(double));
-  // }
-
-  //  rayPosition(ray_transformed, t, p);
-  //  point3D *n_orig = newPoint(p->px, p->py, p->pz, 0);
-  //  memcpy(lambda, &t, sizeof(double));
-
-  //  matVecMult(sphere->T, p);
-  //  normalTransform(n_orig, n, sphere);
-
-  //  free(ray_transformed_p0);
-  //  free(ray_transformed_d);
-  //  free(ray_transformed);
-  //  free(n_orig);
 
 
 }
