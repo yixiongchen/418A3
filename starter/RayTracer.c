@@ -162,7 +162,7 @@ void rtShade(struct object3D *obj, struct point3D *p, struct point3D *n, struct 
  struct point3D p_tmp;
  struct point3D n_tmp;
  //light source list
- pointLS *source;
+ struct pointLS *source;
  // loop over light in the scene
  for(source=light_list; source != NULL; source=source->next){
   //light source point
@@ -181,10 +181,10 @@ void rtShade(struct object3D *obj, struct point3D *p, struct point3D *n, struct 
   
   //if there is a intersection in shadow ray path
   if (lambda > 0 && lambda < 1){
-    //printf("222");
-    tmp_col.R = R * 0.1;
-    tmp_col.R = G * 0.1;
-    tmp_col.R = B * 0.1;
+    col->R = 0;
+    col->G = 0;
+    col->B = 0;
+    
   }
   
   //there is no intersection in shadow ray path then compute color
@@ -200,21 +200,21 @@ void rtShade(struct object3D *obj, struct point3D *p, struct point3D *n, struct 
     double ls =lightcolor.B;
 
     //view point ray
-    struct point3D * V_direct = newPoint(-(ray->d.px), -(ray->d.py), -(ray->d.pz), 0);
+    struct point3D * V_direct = newPoint(-ray->d.px, -ray->d.py, -ray->d.pz, 0.0);
     //normal ray
-    struct point3D * N_direct = newPoint(n->px, n->py, n->pz, 0);
+    struct point3D * N_direct = newPoint(n->px, n->py, n->pz, 0.0);
     //incident light ray
-    struct point3D * L_direct = newPoint(p->px - p0.px, p->py - p0.py, p->pz - p0.pz, 0);
+    struct point3D * L_direct = newPoint(p0.px-p->px, p0.py-p->py, p0.pz-p->pz, 0.0);
    
     normalize(L_direct);
     normalize(N_direct);
     normalize(V_direct);
 
     // calculate R
-    double num = 2* dot(L_direct, N_direct);
-    double R_px = num * N_direct->px - L_direct->px;
-    double R_py = num * N_direct->py - L_direct->py;
-    double R_pz = num * N_direct->pz - L_direct->pz;
+    double num = dot(L_direct, N_direct);
+    double R_px = 2*num * N_direct->px - L_direct->px;
+    double R_py = 2*num * N_direct->py - L_direct->py;
+    double R_pz = 2*num * N_direct->pz - L_direct->pz;
 
     //reflected light ray
     struct point3D * R_direct = newPoint(R_px, R_py, R_pz, 0);
@@ -230,7 +230,8 @@ void rtShade(struct object3D *obj, struct point3D *p, struct point3D *n, struct 
     tmp_col.R += R * (phong * la);
     tmp_col.G += G * (phong * ld);
     tmp_col.B += B * (phong * ls);
-    
+
+    //printf("col->R is %f\n", col->R);
     free(L_direct);
     free(N_direct);
     free(R_direct);
@@ -238,41 +239,38 @@ void rtShade(struct object3D *obj, struct point3D *p, struct point3D *n, struct 
   }
  }
 
- 
  // recrusion with depth
- if (depth < MAX_DEPTH){
-  //reflectray  = reflectRay = create a reflected ray at the intersection;
-  struct ray3D *New_Ray = (struct ray3D*)malloc(sizeof(struct ray3D));
-  struct point3D *new_direct = (struct point3D *)malloc(sizeof(struct point3D));
-  struct point3D Ray_d = ray->d;
+//  if (depth < MAX_DEPTH){
+//   //reflectray  = reflectRay = create a reflected ray at the intersection;
+//   struct ray3D *New_Ray = (struct ray3D*)malloc(sizeof(struct ray3D));
+//   struct point3D *new_direct = (struct point3D *)malloc(sizeof(struct point3D));
+//   struct point3D* Ray_d = newPoint(-ray->d.px, -ray->d.py, -ray->d.pz, 0);
 
-  // calculate new reflective ray direction
-  double num = 2* dot(&Ray_d, n);
-  new_direct->px = num * n->px - Ray_d.px;
-  new_direct->py = num * n->py - Ray_d.py;
-  new_direct->pz = num * n->pz - Ray_d.pz;
-  new_direct->pw = 0;
+//   // calculate new reflective ray direction
+//   double num = dot(Ray_d, n);
+//   new_direct->px = 2*num * n->px - Ray_d->px;
+//   new_direct->py = 2*num * n->py - Ray_d->py;
+//   new_direct->pz = 2*num * n->pz - Ray_d->pz;
+//   new_direct->pw = 0;
+//   normalize(new_direct);
+//   New_Ray = newRay(p, new_direct);
+//   //call ray trace
+//   struct colourRGB recur_color;
+//   rayTrace(New_Ray, depth+1, &recur_color, obj);
+//   tmp_col.R += recur_color.R;
+//   tmp_col.G += recur_color.G;
+//   tmp_col.B += recur_color.B;
+//   free(new_direct);
+//   free(New_Ray);
+//   free(Ray_d);
+// }
 
-  New_Ray = newRay(p, new_direct);
-  //call ray trace
-  struct colourRGB recur_color;
-  depth += 1;
-  rayTrace(New_Ray, depth, &recur_color, obj);
-
-  tmp_col.R += recur_color.R;
-  tmp_col.G += recur_color.G;
-  tmp_col.B += recur_color.B;
-
-  free(new_direct);
-  free(New_Ray);
-}
-
- // Be sure to update 'col' with the final colour computed here!
+//Be sure to update 'col' with the final colour computed here!
 col->R = tmp_col.R;
 col->G = tmp_col.G;
 col->B = tmp_col.B;
+printf("shade color is %f, %f, %f\n", col->R, col->G, col->B);
 
-return;
 
 }
 
@@ -309,7 +307,7 @@ void findFirstHit(struct ray3D *ray, double *lambda, struct object3D *Os, struct
   //find the intersection object and get the lambda
   object->intersect(object, ray, &lambda_closest, &p_tmp, &n_tmp, a, b);
   //printf("the lambda computed from ray is %f\n",lambda_tmp);
-  if((*lambda <0 || *lambda > lambda_closest) && ( lambda_closest > 0)){
+  if((*lambda == -1 || *lambda > lambda_closest) && ( lambda_closest > 0)){
     // get the lamda
     *lambda = lambda_closest;
     //get the pointer to the object at the intersection
@@ -320,7 +318,6 @@ void findFirstHit(struct ray3D *ray, double *lambda, struct object3D *Os, struct
     *n= n_tmp;  
   }
  }
-
  return;
 }
 
@@ -349,9 +346,7 @@ void rayTrace(struct ray3D *ray, int depth, struct colourRGB *col, struct object
 
  if (depth>MAX_DEPTH)	// Max recursion depth reached. Return invalid colour.
  {
-  col->R=-1;
-  col->G=-1;
-  col->B=-1;
+ 
   return;
  }
 
@@ -370,30 +365,18 @@ if(lambda <= 0){
 }
 
 //intersection point exist
-if (lambda > 0){
+if (obj != Os && lambda > 0){
   //shading and phong
-  //printf("sa\n");
-   printf("ddse\n");
-  rtShade(obj, &p, &n, ray, depth, a, b, &I);
-  
-}
-
-else{
-  //background color
-  I.R = 0;
-  I.G = 0;
-  I.B = 0;
-}
-
-//assign color to image
-col->R = I.R;
-col->G = I.G;
-col->B = I.B;
-
+  //printf("color\n");
+  rtShade(obj, &p, &n, ray, depth, a, b, &I); 
+  //printf("color is %f, %f, %f\n", I.R, I.G, I.B);
+  //assign color to image
+  col->R = I.R;
+  col->G = I.G;
+  col->B = I.B;
+  }  
 
 }
-
-
 
 
 int main(int argc, char *argv[])
@@ -475,7 +458,7 @@ int main(int argc, char *argv[])
 
  // Camera center is at (0,0,-1)
  e.px=0;
- e.py=0.2;
+ e.py=0;
  e.pz=-1;
  e.pw=1;
 
@@ -568,11 +551,31 @@ int main(int argc, char *argv[])
     // ray trace
     rayTrace(ray, 0, &col, NULL);
     
+    //printf("color is col %f , %f, %f\n", col.R, col.G, col.B);
     // create image
-    rgbIm[(j*sx+i)*3]   =col.R*255;
-    rgbIm[(j*sx+i)*3+1] =col.G*255;
-    rgbIm[(j*sx+i)*3+2] =col.B*255;
-   
+
+
+    if(col.R > 1){
+       rgbIm[(j*sx+i)*3] =255;
+    }
+    else{
+       rgbIm[(j*sx+i)*3] =col.R*255;
+    }
+
+    if(col.G > 1){
+       rgbIm[(j*sx+i)*3+1]=255;
+    }
+    else{
+       rgbIm[(j*sx+i)*3+1] =col.G*255;
+    }
+
+    if(col.B > 1){
+       rgbIm[(j*sx+i)*3+2] =255;
+    }
+    else{
+       rgbIm[(j*sx+i)*3+2] =col.B*255;
+    }
+    
 
   } // end for i
  } // end for j

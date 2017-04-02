@@ -43,6 +43,20 @@ inline void matTranspose(double A[4][4], double B[4][4])
  memcpy(B, C ,16*sizeof(double));
 }
 
+// // zeng's
+// inline void matTranspose(double T[4][4])
+// {
+//   double Trans[4][4];
+
+//   memset(Trans, 0, 16*sizeof(double));
+//   for (int i=0; i<4; i++){
+//     for(int j=0; j<4; j++){
+//       Trans[i][j] = T[j][i];
+//     }
+//   }
+//   memcpy(T, Trans, 16*sizeof(double));
+// }
+
 
 
 inline void matMult(double A[4][4], double B[4][4])

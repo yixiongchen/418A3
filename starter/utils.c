@@ -73,6 +73,7 @@ inline void rayTransform(struct ray3D *ray_orig, struct ray3D *ray_transformed, 
  ///////////////////////////////////////////
 
  //word to model
+
  struct point3D p0;
  struct point3D d;
  memcpy(&p0, &ray_orig->p0, sizeof(struct point3D));
@@ -83,6 +84,14 @@ inline void rayTransform(struct ray3D *ray_orig, struct ray3D *ray_transformed, 
  ray_transformed->p0= p0;
  ray_transformed->d = d;
  ray_transformed->rayPos = &rayPosition;
+
+ // memcpy(&ray_transformed->p0, &ray_orig->p0, 4*sizeof(double));
+ // matVecMult(obj->Tinv, &ray_transformed->p0);
+
+ // memcpy(&ray_transformed->d, &ray_orig->d, 4*sizeof(double));
+ // matVecMult(obj->Tinv, &ray_transformed->d);
+
+ // ray_transformed->rayPos =&rayPosition;
 
  
 }
@@ -97,15 +106,23 @@ inline void normalTransform(struct point3D *n_orig, struct point3D *n_transforme
  // TO DO: Complete this function
  ///////////////////////////////////////////
  
- // first do the transpose
- 
+ //first do the transpose
  double T[4][4];
  memcpy(n_transformed, n_orig, sizeof(struct point3D) );
 
  // do transpose
  matTranspose(obj->Tinv, T);
- //final transformation
+ //final transformation 
  matVecMult(T, n_transformed);
+
+
+ // //zeng
+ //  double T_inv_trans[4][4];
+ //  memcpy(T_inv_trans, obj->Tinv, 16*sizeof(double));
+ //  matTranspose(T_inv_trans);
+
+ //  memcpy(n_transformed, n_orig, 4*sizeof(double));
+ //  matVecMult(T_inv_trans, n_transformed);
 
 }
 
@@ -208,6 +225,8 @@ void planeIntersect(struct object3D *plane, struct ray3D *ray, double *lambda, s
  /////////////////////////////////
 
 double com_lambda;
+struct point3D* intersect_p = (struct point3D*)malloc(sizeof(struct point3D));
+struct point3D* normal_p = (struct point3D*)malloc(sizeof(struct point3D));
 //tranform to model object
 struct ray3D *ray_transformed = (struct ray3D*)malloc(sizeof(struct ray3D));
 rayTransform(ray, ray_transformed, plane);
@@ -217,38 +236,50 @@ com_lambda = -(ray_transformed->p0.pz)/(ray_transformed->d.pz);
 
 // if there is no intersection 
 if(com_lambda < 0 || ray_transformed->d.pz == 0 ){
-  com_lambda = -1;
-  memcpy(lambda, &com_lambda, sizeof(double));
-  return;
+   com_lambda = -1;
+   memcpy(lambda, &com_lambda, sizeof(double));
 }
 
 
-//compute the intersection point with lambda
-rayPosition(ray_transformed, com_lambda, p);
 
-//compute normal point
-struct point3D* normal_p = newPoint(0, 0, 1, 0);
-// if intersection within x[1, -1] and y[1, -1]
-if(p->px <= 1 && p->px >= -1 && p->py >= -1 && p->py <= 1){
 
-  //convert intersection point to world coordinates now
-  matVecMult(plane->T, p);
-  //normal vector
-  normalTransform(normal_p, n, plane);
-  //store lambda
-  memcpy(lambda, &com_lambda, sizeof(double));
-
-}
-//if intersection is out of plane
+// if there is a intersection
 else{
-  com_lambda = -1;
-  memcpy(lambda, &com_lambda, sizeof(double));
-  return;
-}
+  //compute the intersection point with lambda
+  rayPosition(ray_transformed, com_lambda, intersect_p);
 
-free(&ray_transformed->p0);
-free(&ray_transformed->d);
-free(ray_transformed);
+  //compute normal point
+  struct point3D* normal_p ;
+  if(plane->frontAndBack == 1){
+    if (ray_transformed->p0.pz < 0){
+     normal_p  = newPoint(0, 0, -1, 0);
+    }
+    else{
+     normal_p  = newPoint(0, 0, 1, 0);
+    }
+  }
+  else{
+     normal_p  = newPoint(0, 0, 1, 0);
+  }
+  
+  // if intersection within x[1, -1] and y[1, -1]
+  if(intersect_p->px <= 1 && intersect_p->px >= -1 && intersect_p->py >= -1 && intersect_p->py <= 1){
+
+    //convert intersection point to world coordinates now
+    matVecMult(plane->T, intersect_p);
+    memcpy(p, intersect_p, sizeof(struct point3D));
+    //normal vector
+    normalTransform(normal_p, normal_p, plane);
+    memcpy(n, normal_p, sizeof(struct point3D));
+    //store lambda
+    memcpy(lambda, &com_lambda, sizeof(double));
+  }
+  //if the intersection is out of plane
+  else{
+    com_lambda = -1;
+    memcpy(lambda, &com_lambda, sizeof(double));
+  }
+}
 
 }
 
@@ -265,7 +296,10 @@ double com_lambda;
 double t1;
 double t2;
 //tranform to model object
-struct ray3D *ray_transformed = (struct ray3D*)malloc(sizeof(struct ray3D));
+struct point3D *ray_transformed_p0 = newPoint(0, 0, 0, 1);
+struct point3D *ray_transformed_d = newPoint(0, 0, 0, 0);
+
+struct ray3D *ray_transformed = newRay(ray_transformed_p0, ray_transformed_d);
 rayTransform(ray, ray_transformed, sphere);
 
 
@@ -274,7 +308,9 @@ double A = dot(&ray_transformed->d, &ray_transformed->d);
 double B = 2*dot(&ray_transformed->d, &ray_transformed->p0);
 double C = dot(&ray_transformed->p0, &ray_transformed->p0) -1;
 
-if (A == 0){
+t1 = (-B - sqrt(B*B - (4*A*C))) / (2*A);
+
+if (A == 0 || t1 < 0 || B*B-4*A*C < 0){
   com_lambda = -1;
   memcpy(lambda, &com_lambda, sizeof(double));
   return;
@@ -288,12 +324,9 @@ else{
   //compute lambda
   t1 = (-B - sqrt(B*B - (4*A*C))) / (2*A);
   t2 = (-B + sqrt(B*B - (4*A*C))) / (2*A);
-  //printf("t1 is %f\n", t1);
-  //printf("t2 is %f\n", t2);
   //choose first hit
   if (t1 > 0 && t2 >0){
-
-    com_lambda = t1;
+     com_lambda = t1;
   }
   else{
     com_lambda = max(t1, t2);
@@ -305,35 +338,53 @@ else{
     memcpy(lambda, &com_lambda, sizeof(double));
     return;
   }
-  
-  //printf("lambda is %f\n",com_lambda);
-
   //compute the intersection point with lambda
-  rayPosition(ray_transformed, com_lambda, p);
+  rayPosition(ray_transformed, t1, p);
 
   //compute normal point
   struct point3D* normal_p;
   normal_p = newPoint(p->px, p->py, p->pz, 0);
-
+ 
+  //store lambda
+  memcpy(lambda, &t1, sizeof(double));
   //convert intersection point to world coordinates now
   matVecMult(sphere->T, p);
   //normal vector
   normalTransform(normal_p, n, sphere);
-  //store lambda
-  memcpy(lambda, &com_lambda, sizeof(double));
-
-  free(&ray_transformed->p0);
-  free(&ray_transformed->d);
-  free(ray_transformed);
-
 
 }
 
+  // struct point3D *ray_transformed_p0 = newPoint(0, 0, 0, 1);
+  // struct point3D *ray_transformed_d = newPoint(0, 0, 0, 0);
+  // struct ray3D *ray_transformed = newRay(ray_transformed_p0, ray_transformed_d);
+  // rayTransform(ray, ray_transformed, sphere);
+
+  // double t, t1,t2, A, B, C;
+
+  // A= dot(&ray_transformed->d, &ray_transformed->d);
+  // B= 2 * dot(&ray_transformed->d, &ray_transformed->p0);
+  // C =dot(&ray_transformed->p0, &ray_transformed->p0) -1;
+
+  // t =(-B - sqrt(B*B - 4*A *C)) /(2 *A);
+
+  // if( t < 0 || A ==0 ||  B * B - 4*A*C < 0){
+  //   t =-1;
+  //   memcpy(lambda, &t, sizeof(double));
+  // }
+
+  //  rayPosition(ray_transformed, t, p);
+  //  point3D *n_orig = newPoint(p->px, p->py, p->pz, 0);
+  //  memcpy(lambda, &t, sizeof(double));
+
+  //  matVecMult(sphere->T, p);
+  //  normalTransform(n_orig, n, sphere);
+
+  //  free(ray_transformed_p0);
+  //  free(ray_transformed_d);
+  //  free(ray_transformed);
+  //  free(n_orig);
 
 
-
-
- 
 }
 
 void loadTexture(struct object3D *o, const char *filename)
