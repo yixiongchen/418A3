@@ -109,6 +109,7 @@ inline void normalTransform(struct point3D *n_orig, struct point3D *n_transforme
 
 }
 
+
 /////////////////////////////////////////////
 // Object management section
 /////////////////////////////////////////////
@@ -151,6 +152,7 @@ struct object3D *newPlane(double ra, double rd, double rs, double rg, double r, 
  return(plane);
 }
 
+
 struct object3D *newSphere(double ra, double rd, double rs, double rg, double r, double g, double b, double alpha, double r_index, double shiny)
 {
  // Intialize a new sphere with the specified parameters:
@@ -189,6 +191,7 @@ struct object3D *newSphere(double ra, double rd, double rs, double rg, double r,
  return(sphere);
 }
 
+
 ///////////////////////////////////////////////////////////////////////////////////////
 // TO DO:
 //	Complete the functions that compute intersections for the canonical plane
@@ -214,18 +217,17 @@ com_lambda = -(ray_transformed->p0.pz)/(ray_transformed->d.pz);
 
 // if there is no intersection 
 if(com_lambda < 0 || ray_transformed->d.pz == 0 ){
-  double lam = -1;
-  memcpy(lambda, &lam, sizeof(double));
+  com_lambda = -1;
+  memcpy(lambda, &com_lambda, sizeof(double));
   return;
 }
+
 
 //compute the intersection point with lambda
 rayPosition(ray_transformed, com_lambda, p);
 
 //compute normal point
-struct point3D* normal_p;
-normal_p = newPoint(0, 0, 1, 0);
-
+struct point3D* normal_p = newPoint(0, 0, 1, 0);
 // if intersection within x[1, -1] and y[1, -1]
 if(p->px <= 1 && p->px >= -1 && p->py >= -1 && p->py <= 1){
 
@@ -239,15 +241,14 @@ if(p->px <= 1 && p->px >= -1 && p->py >= -1 && p->py <= 1){
 }
 //if intersection is out of plane
 else{
-  double lam = -1;
-  memcpy(lambda, &lam, sizeof(double));
- 
+  com_lambda = -1;
+  memcpy(lambda, &com_lambda, sizeof(double));
+  return;
 }
 
 free(&ray_transformed->p0);
 free(&ray_transformed->d);
 free(ray_transformed);
-
 
 }
 
@@ -271,17 +272,14 @@ rayTransform(ray, ray_transformed, sphere);
 //quadratic equation parameter
 double A = dot(&ray_transformed->d, &ray_transformed->d);
 double B = 2*dot(&ray_transformed->d, &ray_transformed->p0);
-double C = dot(&ray_transformed->p0, &ray_transformed->p0);
-printf("A is %f\n", A);
-printf("A is %f\n", B);
-printf("A is %f\n", C);
+double C = dot(&ray_transformed->p0, &ray_transformed->p0) -1;
 
 if (A == 0){
   com_lambda = -1;
   memcpy(lambda, &com_lambda, sizeof(double));
   return;
 }
-else if(sqrt(pow(B, 2) - (4*A*C)) < 0){
+else if(B*B - 4*A*C < 0){
   com_lambda = -1;
   memcpy(lambda, &com_lambda, sizeof(double));
   return;
@@ -290,8 +288,8 @@ else{
   //compute lambda
   t1 = (-B - sqrt(B*B - (4*A*C))) / (2*A);
   t2 = (-B + sqrt(B*B - (4*A*C))) / (2*A);
-  printf("t1 is %f\n", t1);
-  printf("t2 is %f\n", t2);
+  //printf("t1 is %f\n", t1);
+  //printf("t2 is %f\n", t2);
   //choose first hit
   if (t1 > 0 && t2 >0){
 
@@ -300,7 +298,7 @@ else{
   else{
     com_lambda = max(t1, t2);
   }
-   
+  
   // if there is not intersection
   if(com_lambda < 0){
     com_lambda = -1;

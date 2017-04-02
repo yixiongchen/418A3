@@ -138,6 +138,7 @@ void rtShade(struct object3D *obj, struct point3D *p, struct point3D *n, struct 
 
  if (obj->texImg==NULL)		// Not textured, use object colour
  {
+
   R=obj->col.R;
   G=obj->col.G;
   B=obj->col.B;
@@ -154,7 +155,12 @@ void rtShade(struct object3D *obj, struct point3D *p, struct point3D *n, struct 
  // TO DO: Implement this function. Refer to the notes for
  // details about the shading model.
  //////////////////////////////////////////////////////////////
- 
+ double lambda = -1;
+ double a_tmp;
+ double b_tmp;
+ struct object3D *hit_obj;
+ struct point3D p_tmp;
+ struct point3D n_tmp;
  //light source list
  pointLS *source;
  // loop over light in the scene
@@ -165,24 +171,20 @@ void rtShade(struct object3D *obj, struct point3D *p, struct point3D *n, struct 
 
   //create a shadow ray from intersection to light
   struct point3D *shadow_d = newPoint(p0.px - p->px, p0.py - p->py, p0.pz - p->pz, 1);
-  struct ray3D *shadowRay = newRay(&p0, shadow_d);
+  struct ray3D *shadowRay = newRay(p, shadow_d);
 
   //variables to indicate object intersected by shadow ray
-  double lambda;
-  double a_tmp;
-  double b_tmp;
-  struct object3D *hit_obj;
-  struct point3D p_tmp;
-  struct point3D n_tmp;
-
-  //find intersection from intersection point to light
+   
+  //find intersection for shadow
   findFirstHit(shadowRay, &lambda, obj, &hit_obj, &p_tmp, &n_tmp, &a_tmp, &b_tmp);
-
-  // if there is a intersection in shadow ray path
+  
+  
+  //if there is a intersection in shadow ray path
   if (lambda > 0 && lambda < 1){
-    tmp_col.R = R * 0.02;
-    tmp_col.R = G * 0.02;
-    tmp_col.R = B * 0.02;
+    //printf("222");
+    tmp_col.R = R * 0.1;
+    tmp_col.R = G * 0.1;
+    tmp_col.R = B * 0.1;
   }
   
   //there is no intersection in shadow ray path then compute color
@@ -217,7 +219,7 @@ void rtShade(struct object3D *obj, struct point3D *p, struct point3D *n, struct 
     //reflected light ray
     struct point3D * R_direct = newPoint(R_px, R_py, R_pz, 0);
     //normalize
-    normalize(R_direct); 
+    //normalize(R_direct); 
     //calculate phong
     double max_one = max(0, dot(N_direct, L_direct));
     //phong formula 
@@ -225,10 +227,10 @@ void rtShade(struct object3D *obj, struct point3D *p, struct point3D *n, struct 
     double phong = ka + kd*max_one + ks*max_two;
 
     //update color
-    tmp_col.R = R * (phong * la);
-    tmp_col.G = G * (phong * ld);
-    tmp_col.B = B * (phong * ls);
-
+    tmp_col.R += R * (phong * la);
+    tmp_col.G += G * (phong * ld);
+    tmp_col.B += B * (phong * ls);
+    
     free(L_direct);
     free(N_direct);
     free(R_direct);
@@ -236,7 +238,7 @@ void rtShade(struct object3D *obj, struct point3D *p, struct point3D *n, struct 
   }
  }
 
-
+ 
  // recrusion with depth
  if (depth < MAX_DEPTH){
   //reflectray  = reflectRay = create a reflected ray at the intersection;
@@ -250,15 +252,13 @@ void rtShade(struct object3D *obj, struct point3D *p, struct point3D *n, struct 
   new_direct->py = num * n->py - Ray_d.py;
   new_direct->pz = num * n->pz - Ray_d.pz;
   new_direct->pw = 0;
- 
+
   New_Ray = newRay(p, new_direct);
-
-  //increment on depth
-
   //call ray trace
   struct colourRGB recur_color;
+  depth += 1;
   rayTrace(New_Ray, depth, &recur_color, obj);
-  
+
   tmp_col.R += recur_color.R;
   tmp_col.G += recur_color.G;
   tmp_col.B += recur_color.B;
@@ -268,9 +268,9 @@ void rtShade(struct object3D *obj, struct point3D *p, struct point3D *n, struct 
 }
 
  // Be sure to update 'col' with the final colour computed here!
-col -> R = tmp_col.R;
-col -> G = tmp_col.G;
-col -> B = tmp_col.B;
+col->R = tmp_col.R;
+col->G = tmp_col.G;
+col->B = tmp_col.B;
 
 return;
 
@@ -305,11 +305,11 @@ void findFirstHit(struct ray3D *ray, double *lambda, struct object3D *Os, struct
   if(object == Os){
     continue;
   }
-
+  
   //find the intersection object and get the lambda
   object->intersect(object, ray, &lambda_closest, &p_tmp, &n_tmp, a, b);
   //printf("the lambda computed from ray is %f\n",lambda_tmp);
-  if((*lambda == -1 || *lambda > lambda_closest) && ( lambda_closest > 0)){
+  if((*lambda <0 || *lambda > lambda_closest) && ( lambda_closest > 0)){
     // get the lamda
     *lambda = lambda_closest;
     //get the pointer to the object at the intersection
@@ -363,7 +363,7 @@ void rayTrace(struct ray3D *ray, int depth, struct colourRGB *col, struct object
  //find the first hitted object in object_list
 lambda = -1;
 findFirstHit(ray, &lambda, NULL, &obj, &p, &n, &a, &b);
-
+//printf("lambda in ray is %f\n", lambda);
 // there is not intersection
 if(lambda <= 0){
   return;
@@ -373,7 +373,9 @@ if(lambda <= 0){
 if (lambda > 0){
   //shading and phong
   //printf("sa\n");
+   printf("ddse\n");
   rtShade(obj, &p, &n, ray, depth, a, b, &I);
+  
 }
 
 else{
@@ -473,7 +475,7 @@ int main(int argc, char *argv[])
 
  // Camera center is at (0,0,-1)
  e.px=0;
- e.py=0;
+ e.py=0.2;
  e.pz=-1;
  e.pw=1;
 
