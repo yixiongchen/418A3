@@ -1,0 +1,6 @@
+During the A3, I found the most difficult part is the recrsive ray trace.
+In order to the accumulate the color, I have to handle the realtionship among
+the functions rshape, raytrace and findfirsthit. At first, I could not get the 
+correct color, then I spent a lots of time sloving this problem. Another things was the
+how to alllocate meomory for object and free them correctly. It often caused segmentaion 
+fault. This assignment is great and I learned a lot about graphical images.
