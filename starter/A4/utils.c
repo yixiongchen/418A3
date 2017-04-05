@@ -276,9 +276,12 @@ void sphereIntersect(struct object3D *sphere, struct ray3D *ray, double *lambda,
  /////////////////////////////////
  // TO DO: Complete this function.
  /////////////////////////////////
+double text_R, text_G, text_B;
 double com_lambda;
 double t1;
 double t2;
+double theta1, theta2;
+double u, v;
 //tranform to model object
 struct point3D *ray_transformed_p0 = newPoint(0, 0, 0, 1);
 struct point3D *ray_transformed_d = newPoint(0, 0, 0, 0);
@@ -325,20 +328,36 @@ else{
   //compute the intersection point with lambda
   rayPosition(ray_transformed, t1, p);
 
+  //compute a, b 
+
+  // theta1 = acos(p->pz/1);
+  // theta2 = atan(p->py/p->px);
+  // u =fmod(theta2, 2*PI) / (2*PI);
+  // v = (PI - theta1) / PI;
+
+  u = 0.5 + atan2(p->pz, p->px) / (2*PI);
+  v = 0.5 - asin(p->py)/PI;
+
+  memcpy(a, &u, sizeof(double));
+  memcpy(b, &v, sizeof(double));
+  
+
   //compute normal point
   struct point3D* normal_p;
   normal_p = newPoint(p->px, p->py, p->pz, 0);
- 
+  
   //store lambda
   memcpy(lambda, &t1, sizeof(double));
   //convert intersection point to world coordinates now
-  matVecMult(sphere->T, p);
+  matVecMult(sphere->T, p); 
   //normal vector
   normalTransform(normal_p, n, sphere);
+
 }
 
 
 }
+
 
 void loadTexture(struct object3D *o, const char *filename)
 {
@@ -355,6 +374,7 @@ void loadTexture(struct object3D *o, const char *filename)
  }
 }
 
+
 void texMap(struct image *img, double a, double b, double *R, double *G, double *B)
 {
  /*
@@ -368,7 +388,7 @@ void texMap(struct image *img, double a, double b, double *R, double *G, double 
   The colour is returned in R, G, B. Uses bi-linear interpolation
   to determine texture colour.
  */
-
+ 
  //////////////////////////////////////////////////
  // TO DO (Assignment 4 only):
  //
@@ -378,9 +398,22 @@ void texMap(struct image *img, double a, double b, double *R, double *G, double 
  // interpolation to obtain the texture colour.
  //////////////////////////////////////////////////
 
- *(R)=0;	// Returns black - delete this and
- *(G)=0;	// replace with your code to compute
- *(B)=0;	// texture colour at (a,b)
+ int i;
+ int j;
+ double r, g, b_1;
+ i = (int)floor(a*(img->sx));
+ j = (int)floor(b*(img->sy));
+ unsigned char *rgbIm = (unsigned char *)img->rgbdata;
+ // *(R) = 0;
+ // *(G) = 0;
+ // *(B) = 0;
+ r = rgbIm[(i*img->sx+j)*3];
+ g = rgbIm[(i*img->sx+j)*3+1];
+ b_1 = rgbIm[(i*img->sx+j)*3+2];
+ *(R) = r / 255;
+ *(G) = g / 255;
+ *(B) = b_1 / 255;
+
  return;
 }
 
@@ -439,6 +472,46 @@ void addAreaLight(float sx, float sy, float nx, float ny, float nz,\
   // TO DO: (Assignment 4!)
   // Implement this function to enable area light sources
   /////////////////////////////////////////////////////
+  
+  //create area light rectangle plane, lightsource=1
+  struct object3D *o;
+  o=newPlane(.05,.75,.05,.05,.55,.8,.75,1,1,2);
+  // size  size (sx, sy)
+  Scale(o,sx,sy,1);
+  //RotateZ(o,PI/1.5);
+  // rotate with normal vector
+  // original normal vector[0, 0, 1, 0]
+  // current normal vector[nx, ny, nz, 0]
+  //RotateY(o,PI/2);
+  RotateZ(o,PI/1.5);
+  Translate(o,tx,ty,tz);
+  invert(&o->T[0][0],&o->Tinv[0][0]);    // Very important! compute
+            // and store the inverse
+             // transform for this object!
+  //insertObject(o,o_list);
+
+  //generate light source point
+  int i, j;
+  struct pointLS *l;
+  for (i=0; i<8; i++){
+    for(j=0; j<8; j++){
+      struct point3D p;
+      p.px= -1+ i* 0.25+ 0.125;
+      p.py= 1 -j* 0.25 - 0.125;
+      p.pz= 0;
+      p.pw= 1;  
+      //transform lights point into world coordinate
+      matVecMult(o->T, &p);
+ 
+      if(i >= 0){
+        l=newPLS(&p,r/64,g/64,b/64);
+        printf("point is %f %f %f\n", p.px, p.py, p.pz);
+        insertPLS(l, l_list);
+      }
+
+    }
+  }
+
 
 }
 

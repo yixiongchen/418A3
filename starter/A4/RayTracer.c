@@ -20,6 +20,8 @@
 
 #include "utils.h"
 #include <math.h>
+#include  <time.h>
+#include <cmath>
 
 // A couple of global structures and data: An object list, a light list, and the
 // maximum recursion depth
@@ -96,7 +98,7 @@ void buildScene(void)
  invert(&o->T[0][0],&o->Tinv[0][0]);
  insertObject(o,&object_list);
 
- // Insert a single point light source.
+ //Insert a single point light source.
  p.px=0;
  p.py=15.5;
  p.pz=-5.5;
@@ -104,6 +106,10 @@ void buildScene(void)
  l=newPLS(&p,.95,.95,.95);
  insertPLS(l,&light_list);
 
+ //add area light source
+ //int sx = 1;
+ //int sy = 1;
+ //addAreaLight(1, 1, 0, 0, 0, -10, 25.5, -5.5, 4, 4, 0.95, 0.95, 0.95, &object_list, &light_list);
  // End of simple scene for Assignment 3
  // Keep in mind that you can define new types of objects such as cylinders and parametric surfaces,
  // or, you can create code to handle arbitrary triangles and then define objects as surface meshes.
@@ -112,6 +118,65 @@ void buildScene(void)
  //           the relflectance properties of your objects, and the number and type of light sources
  //           in the scene.
 }
+
+
+//assignment 4:
+void buildOwnScene(void){
+  struct object3D *o;
+  struct pointLS *l;
+  struct point3D p;
+ 
+  //earth
+  o=newSphere(.05,.95,.35,0,0,0.7,1,1,1,6);
+  Scale(o,2,2,2);
+  Translate(o,1.75,1.25,5.0);
+  invert(&o->T[0][0],&o->Tinv[0][0]);
+  insertObject(o,&object_list);
+  //loadTexture(o, "tree_1.ppm");
+  
+  //moon
+  o=newSphere(.05,.95,.85,.75,1,0.7,0.2,1,1,6);
+  Scale(o,1,1,1);
+  Translate(o,-2.5,1,4.5);
+  invert(&o->T[0][0],&o->Tinv[0][0]);
+  insertObject(o,&object_list);
+  //loadTexture(o, "tree_1.ppm");
+  
+  //sun
+  o=newSphere(0.30,0.80,.1,.0,0.99,0.21,0,1,1,6);
+  Scale(o,0.3,0.3,0.3);
+  Translate(o,-2.5,3.5,4.5);
+  invert(&o->T[0][0],&o->Tinv[0][0]);
+  insertObject(o,&object_list);
+
+  //plane
+  o=newPlane(.05,.75,.05,.0,.55,.8,.50,1,1,2);
+              // meaningless since alpha=1
+  Scale(o,60,60,1);        // Do a few transforms...
+  RotateZ(o,PI/1.20);
+  RotateX(o,PI/2.25);
+  Translate(o,0,-3,10);
+  invert(&o->T[0][0],&o->Tinv[0][0]);    // Very important! compute
+            // and store the inverse
+            // transform for this object!
+  insertObject(o,&object_list);      // Insert into object list
+
+
+  //Insert a single point light source.
+  p.px=0;
+  p.py=15.5;
+  p.pz=-5.5;
+  p.pw=1;
+  l=newPLS(&p,.95,.95,.95);
+  insertPLS(l,&light_list);
+
+
+}
+
+
+
+
+
 
 void rtShade(struct object3D *obj, struct point3D *p, struct point3D *n, struct ray3D *ray, int depth, double a, double b, struct colourRGB *col)
 {
@@ -150,6 +215,9 @@ void rtShade(struct object3D *obj, struct point3D *p, struct point3D *n, struct 
   // Get object colour from the texture given the texture coordinates (a,b), and the texturing function
   // for the object. Note that we will use textures also for Photon Mapping.
   obj->textureMap(obj->texImg,a,b,&R,&G,&B);
+  printf("a is %f , b is %f\n", a, b);
+  printf("R G B: %f %f %f\n", R, G, B);
+
  }
 
  //////////////////////////////////////////////////////////////
@@ -159,6 +227,7 @@ void rtShade(struct object3D *obj, struct point3D *p, struct point3D *n, struct 
  double lambda = -1;
  double a_tmp;
  double b_tmp;
+ int num_lights = 0;
  struct object3D *hit_obj;
  struct point3D p_tmp;
  struct point3D n_tmp;
@@ -166,6 +235,9 @@ void rtShade(struct object3D *obj, struct point3D *p, struct point3D *n, struct 
  struct pointLS *source;
  // loop over light in the scene
  for(source=light_list; source != NULL; source=source->next){
+
+  // count number of light sources
+  num_lights += 1;
   //light source point
   struct point3D p0 = source->p0;
   struct colourRGB lightcolor = source->col; 
@@ -181,15 +253,19 @@ void rtShade(struct object3D *obj, struct point3D *p, struct point3D *n, struct 
   findFirstHit(shadowRay, &lambda, obj, &hit_obj, &p_tmp, &n_tmp, &a_tmp, &b_tmp);
   
   //if there is a intersection in shadow ray path
-  if (lambda >= 0 && lambda < 1){
+  if (lambda > 0 && lambda < 1){
     tmp_col.R += obj->alb.ra*lightcolor.R*R;
     tmp_col.G += obj->alb.ra*lightcolor.G*G;
-    tmp_col.B += obj->alb.ra*lightcolor.B*B;  
+    tmp_col.B += obj->alb.ra*lightcolor.B*B;
+    // tmp_col.R += 0;
+    // tmp_col.G += 0;
+    // tmp_col.B += 0;      
   }
 
   
   //there is no intersection in shadow ray path then compute color
   else{
+    srand(time(NULL));
     //get albedos a, d, s
     struct albedosPhong alb = obj->alb;
     double ka = alb.ra;
@@ -221,6 +297,7 @@ void rtShade(struct object3D *obj, struct point3D *p, struct point3D *n, struct 
     struct point3D * R_direct = newPoint(R_px, R_py, R_pz, 0);
     //normalize
     normalize(R_direct); 
+    
     //calculate phong
     double max_one = max(0, dot(N_direct, L_direct));
 
@@ -242,31 +319,52 @@ void rtShade(struct object3D *obj, struct point3D *p, struct point3D *n, struct 
  }
 
 
-//Be sure to update 'col' with the final colour computed here!
 col->R = tmp_col.R;
 col->G = tmp_col.G;
 col->B = tmp_col.B;
 
 
+
 //recrusion with depth
  if (depth < MAX_DEPTH){
-  //reflectray  = reflectRay = create a reflected ray at the intersection;
+  
+
+  //reflective ray: create a reflected ray at the intersection;
   struct ray3D *New_Ray = (struct ray3D*)malloc(sizeof(struct ray3D));
   struct point3D *new_direct = (struct point3D *)malloc(sizeof(struct point3D));
   struct point3D* Ray_d = newPoint(-ray->d.px, -ray->d.py, -ray->d.pz, 0);
-
   // calculate new reflective ray direction
   double num = dot(Ray_d, n);
   new_direct->px = 2*num * n->px - Ray_d->px;
   new_direct->py = 2*num * n->py - Ray_d->py;
   new_direct->pz = 2*num * n->pz - Ray_d->pz;
   new_direct->pw = 0;
-  //normalize(new_direct);
+  normalize(new_direct);
+
+  // implement glossy 
+  //orthonormal basis
+  struct point3D * u = cross(new_direct, n);
+  normalize(u);
+  struct point3D * v = cross(new_direct, u);
+  normalize(v);
+  //hoose uniformly
+  double roughness;
+  roughness = 0.8;
+  double theta = 2 * PI * (rand() *roughness);
+  double phi = 2*PI*(rand() *roughness);
+  double x = sin(theta) * cos(phi);
+  double y = sin(theta) * sin(phi);
+  double z = cos(theta);
+  // Convert sample to world coordinates using the orthonormal basis
+  new_direct->px =  x * u->px + y * v->px + z * new_direct->px;
+  new_direct->py =  x * u->py + y * v->py + z * new_direct->py;
+  new_direct->pz =  x * u->pz + y * v->pz + z * new_direct->pz;
+  new_direct->pw = 0;
+  normalize(new_direct);
 
   New_Ray = newRay(p, new_direct);
   //call ray trace
   rayTrace(New_Ray, depth+1, col, obj);
-  //printf("yes\n");
 
   //free
   free(new_direct);
@@ -300,6 +398,7 @@ void findFirstHit(struct ray3D *ray, double *lambda, struct object3D *Os, struct
  struct object3D* object;
  struct point3D p_tmp;
  struct point3D n_tmp;
+ double a_tmp, b_tmp;
 
  
  //loop over all objects in scene
@@ -307,9 +406,10 @@ void findFirstHit(struct ray3D *ray, double *lambda, struct object3D *Os, struct
 
   //ensure we don't return a self-intersection
   if(object != Os){
-  //printf("wewe\n");
-  //find the intersection object and get the lambda
-    object->intersect(object, ray, &lambda_closest, &p_tmp, &n_tmp, a, b);
+
+    //find the intersection object and get the lambda
+    object->intersect(object, ray, &lambda_closest, &p_tmp, &n_tmp, &a_tmp, &b_tmp);
+
     if((*lambda == -1 || *lambda > lambda_closest) && ( lambda_closest > 0)){
       // get the lamda
       *lambda = lambda_closest;
@@ -317,8 +417,13 @@ void findFirstHit(struct ray3D *ray, double *lambda, struct object3D *Os, struct
       *obj = object;
       //get intersection point
       *p = p_tmp;
-      //geth the normal at the intersection
-      *n= n_tmp;  
+
+      //get the normal at the intersection
+      *n= n_tmp; 
+      
+      // get texture coordinate
+      *a = a_tmp;
+      *b = b_tmp;
     }
   }
  }
@@ -457,7 +562,7 @@ int main(int argc, char *argv[])
  //        for Assignment 4 you need to create your own
  //        *interesting* scene.
  ///////////////////////////////////////////////////
- buildScene();		// Create a scene. This defines all the
+ buildOwnScene();		// Create a scene. This defines all the
 			// objects in the world of the raytracer
 
  //////////////////////////////////////////
@@ -535,65 +640,150 @@ int main(int argc, char *argv[])
  fprintf(stderr,"\n");
 
  fprintf(stderr,"Rendering row: ");
- for (j=0;j<sx;j++)		// For each of the pixels in the image
- {
-  fprintf(stderr,"%d/%d, ",j,sx);
-  for (i=0;i<sx;i++)
-  {
-    ///////////////////////////////////////////////////////////////////
-    // TO DO - complete the code that should be in this loop to do the
-    //         raytracing!
-    ///////////////////////////////////////////////////////////////////
-    // Pixel in Camera Coordinates
-    pc.px = cam->wl+(i+0.5)*du;
-    pc.py = cam->wt+(j+0.5)*dv;
-    pc.pz = cam->f;
-    pc.pw = 1;
 
-    d.px = pc.px - cam->e.px;
-    d.py = pc.py - cam->e.py;
-    d.pz = pc.pz - cam->e.pz;
-    d.pw = 0;
+ srand((unsigned int)time(NULL));
 
-    //Convert to world-space
-    matVecMult(cam->C2W, &pc);
-    matVecMult(cam->C2W, &d);
-    col.R = 0.0;
-    col.G = 0.0;
-    col.B = 0.0;
-     
-    // create ray
-    ray = newRay(&pc, &d);
-    // ray trace
-    rayTrace(ray, 0, &col, NULL);
-    
-    //printf("color is col %f , %f, %f\n", col.R, col.G, col.B);
-    // create image
+  // mutiple threds
+ #pragma omp parallel for
+   for (j=0;j<sx;j++)		// For each of the pixels in the image
+   {
+    fprintf(stderr,"%d/%d, ",j,sx);
+    for (i=0;i<sx;i++)
+    {
+      ///////////////////////////////////////////////////////////////////
+      // TO DO - complete the code that should be in this loop to do the
+      //         raytracing!
+      ///////////////////////////////////////////////////////////////////
 
-    if(col.R > 1){
-       rgbIm[(j*sx+i)*3] =255;
-    }
-    else{
-       rgbIm[(j*sx+i)*3] =col.R*255;
-    }
+      //implementation of anti-aliasing
+      if (antialiasing){
+        //split each piexl into sub-pixel (4x4)
+        //[i, i+1] and [j, j+1]
+        struct point3D sub_pc,sub_d; 
+        float ran_num_x, ran_num_y;
+        struct colourRGB sub_color;
+        sub_color.R = 0.0;
+        sub_color.G = 0.0;
+        sub_color.B = 0.0;
+        int x;
+        int y;
+        // for each sub pixel
+        for(x=0; x<4; x++){
+          for (y=0; y<4; y++){
+            float random_1 = (float)rand() / (float)RAND_MAX;
+            float r_1 = random_1 * 0.25;
+            ran_num_x= (x*0.25) + r_1;
 
-    if(col.G > 1){
-       rgbIm[(j*sx+i)*3+1]=255;
-    }
-    else{
-       rgbIm[(j*sx+i)*3+1] =col.G*255;
-    }
+            float random_2 = (float)rand() / (float)RAND_MAX;
+            float r_2 = random_2 * 0.25;
+            ran_num_y= (y*0.25) + r_2;
 
-    if(col.B > 1){
-       rgbIm[(j*sx+i)*3+2] =255;
-    }
-    else{
-       rgbIm[(j*sx+i)*3+2] =col.B*255;
-    }
-    
+            sub_pc.px = cam->wl+(i+ran_num_x)*du;
+            sub_pc.py = cam->wt+(j+ran_num_y)*dv;
+            sub_pc.pz = cam->f;
+            sub_pc.pw = 1;
 
-  } // end for i
- } // end for j
+            sub_d.px = sub_pc.px - cam->e.px;
+            sub_d.py = sub_pc.py - cam->e.py;
+            sub_d.pz = sub_pc.pz - cam->e.pz;
+            sub_d.pw = 0;
+
+            //Convert to world-space
+            matVecMult(cam->C2W, &sub_pc);
+            matVecMult(cam->C2W, &sub_d);
+            col.R = 0.0;
+            col.G = 0.0;
+            col.B = 0.0;
+            // create ray
+            ray = newRay(&sub_pc, &sub_d);
+            // ray trace
+            rayTrace(ray, 0, &col, NULL);
+            sub_color.R += col.R;
+            sub_color.G += col.G;
+            sub_color.B += col.B;
+          }  
+        }
+
+        //Final Color of pixel is the average of all the samples.
+        sub_color.R  =  sub_color.R /16;
+        sub_color.G  =  sub_color.G /16;
+        sub_color.B  =  sub_color.B /16;
+        //printf("color is col %f , %f, %f\n", sub_color.R, sub_color.G, sub_color.B);
+
+        if(sub_color.R > 1){
+           rgbIm[(j*sx+i)*3] =255;
+        }
+        else{
+           rgbIm[(j*sx+i)*3] =sub_color.R*255;
+        }
+
+        if(sub_color.G > 1){
+           rgbIm[(j*sx+i)*3+1]=255;
+        }
+        else{
+           rgbIm[(j*sx+i)*3+1]=sub_color.G*255;
+        }
+
+        if(sub_color.B > 1){
+           rgbIm[(j*sx+i)*3+2] =255;
+        }
+        else{
+           rgbIm[(j*sx+i)*3+2]=sub_color.B*255;
+        }
+      }
+      
+      //no anti-aliasing
+      else{
+
+        // Pixel in Camera Coordinates
+        pc.px = cam->wl+(i+0.5)*du;
+        pc.py = cam->wt+(j+0.5)*dv;
+        pc.pz = cam->f;
+        pc.pw = 1;
+
+        d.px = pc.px - cam->e.px;
+        d.py = pc.py - cam->e.py;
+        d.pz = pc.pz - cam->e.pz;
+        d.pw = 0;
+
+        //Convert to world-space
+        matVecMult(cam->C2W, &pc);
+        matVecMult(cam->C2W, &d);
+        col.R = 0.0;
+        col.G = 0.0;
+        col.B = 0.0;
+         
+        // create ray
+        ray = newRay(&pc, &d);
+        // ray trace
+        rayTrace(ray, 0, &col, NULL);
+        
+        // create image
+
+        if(col.R > 1){
+           rgbIm[(j*sx+i)*3] =255;
+        }
+        else{
+           rgbIm[(j*sx+i)*3] =col.R*255;
+        }
+
+        if(col.G > 1){
+           rgbIm[(j*sx+i)*3+1]=255;
+        }
+        else{
+           rgbIm[(j*sx+i)*3+1] =col.G*255;
+        }
+
+        if(col.B > 1){
+           rgbIm[(j*sx+i)*3+2] =255;
+        }
+        else{
+           rgbIm[(j*sx+i)*3+2] =col.B*255;
+        }
+
+     }
+    } // end for i
+   } // end for j
 
  fprintf(stderr,"\nDone!\n");
 
