@@ -129,28 +129,29 @@ void buildOwnScene(void){
   //earth
   o=newSphere(.05,.95,.35,0,0,0.7,1,1,1,6);
   Scale(o,2,2,2);
-  Translate(o,1.75,1.25,5.0);
+  Translate(o,1.75, 1.25, 5.0);
   invert(&o->T[0][0],&o->Tinv[0][0]);
   insertObject(o,&object_list);
-  //loadTexture(o, "tree_1.ppm");
+  //loadTexture(o, "earth.ppm");
   
   //moon
   o=newSphere(.05,.95,.85,.75,1,0.7,0.2,1,1,6);
   Scale(o,1,1,1);
-  Translate(o,-2.5,1,4.5);
+  Translate(o,-2.5, 2, 4.5);
   invert(&o->T[0][0],&o->Tinv[0][0]);
   insertObject(o,&object_list);
   //loadTexture(o, "tree_1.ppm");
   
-  //sun
-  o=newSphere(0.30,0.80,.1,.0,0.99,0.21,0,1,1,6);
-  Scale(o,0.3,0.3,0.3);
-  Translate(o,-2.5,3.5,4.5);
+  //marz
+  o=newSphere(0.90,0.90,.4,.4,0.99,0.21,0,1,1,6);
+  Scale(o,1.1,1.1,1.1);
+  Translate(o,-2.5,-1.5,4.5);
   invert(&o->T[0][0],&o->Tinv[0][0]);
   insertObject(o,&object_list);
 
+
   //plane
-  o=newPlane(.05,.75,.05,.0,.55,.8,.50,1,1,2);
+  o=newPlane(.05,.55,.05,.0,.55,.8,.50,1,1,2);
               // meaningless since alpha=1
   Scale(o,60,60,1);        // Do a few transforms...
   RotateZ(o,PI/1.20);
@@ -161,7 +162,6 @@ void buildOwnScene(void){
             // transform for this object!
   insertObject(o,&object_list);      // Insert into object list
 
-
   //Insert a single point light source.
   p.px=0;
   p.py=15.5;
@@ -169,7 +169,9 @@ void buildOwnScene(void){
   p.pw=1;
   l=newPLS(&p,.95,.95,.95);
   insertPLS(l,&light_list);
-
+  //light area implementation
+  //addAreaLight(1, 1, 0, 0, 0, -10, 25.5, -5.5, 4, 4, 0.95, 0.95, 0.95, &object_list, &light_list);
+  
 
 }
 
@@ -333,7 +335,7 @@ col->B = tmp_col.B;
   struct ray3D *New_Ray = (struct ray3D*)malloc(sizeof(struct ray3D));
   struct point3D *new_direct = (struct point3D *)malloc(sizeof(struct point3D));
   struct point3D* Ray_d = newPoint(-ray->d.px, -ray->d.py, -ray->d.pz, 0);
-  // calculate new reflective ray direction
+  // calculate reflective ray direction
   double num = dot(Ray_d, n);
   new_direct->px = 2*num * n->px - Ray_d->px;
   new_direct->py = 2*num * n->py - Ray_d->py;
@@ -341,7 +343,7 @@ col->B = tmp_col.B;
   new_direct->pw = 0;
   normalize(new_direct);
 
-  // implement glossy 
+  //implement glossy on reflective ray
   //orthonormal basis
   struct point3D * u = cross(new_direct, n);
   normalize(u);
@@ -349,9 +351,9 @@ col->B = tmp_col.B;
   normalize(v);
   //hoose uniformly
   double roughness;
-  roughness = 0.8;
-  double theta = 2 * PI * (rand() *roughness);
-  double phi = 2*PI*(rand() *roughness);
+  roughness = 0.6;
+  double theta = 2 * PI * (0.3 *roughness);
+  double phi = 2*PI*(0.4 *roughness);
   double x = sin(theta) * cos(phi);
   double y = sin(theta) * sin(phi);
   double z = cos(theta);
@@ -361,7 +363,9 @@ col->B = tmp_col.B;
   new_direct->pz =  x * u->pz + y * v->pz + z * new_direct->pz;
   new_direct->pw = 0;
   normalize(new_direct);
+  
 
+  //create reflective ray
   New_Ray = newRay(p, new_direct);
   //call ray trace
   rayTrace(New_Ray, depth+1, col, obj);
