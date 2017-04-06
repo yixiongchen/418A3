@@ -193,6 +193,166 @@ struct object3D *newSphere(double ra, double rd, double rs, double rg, double r,
 }
 
 
+
+struct object3D *newCylinder(double ra, double rd, double rs, double rg, double r, double g, double b, double alpha, double r_index, double shiny)
+{
+ // Intialize a new sphere with the specified parameters:
+ // ra, rd, rs, rg - Albedos for the components of the Phong model
+ // r, g, b, - Colour for this plane
+ // alpha - Transparency, must be set to 1 unless you are doing refraction
+ // r_index - Refraction index if you are doing refraction.
+ // shiny -Exponent for the specular component of the Phong model
+ //
+ // This is assumed to represent a unit sphere centered at the origin.
+ //
+
+ struct object3D *sphere=(struct object3D *)calloc(1,sizeof(struct object3D));
+
+ if (!sphere) fprintf(stderr,"Unable to allocate new sphere, out of memory!\n");
+ else
+ {
+  sphere->alb.ra=ra;
+  sphere->alb.rd=rd;
+  sphere->alb.rs=rs;
+  sphere->alb.rg=rg;
+  sphere->col.R=r;
+  sphere->col.G=g;
+  sphere->col.B=b;
+  sphere->alpha=alpha;
+  sphere->r_index=r_index;
+  sphere->shinyness=shiny;
+  sphere->intersect=&cylinderIntersect;
+  sphere->texImg=NULL;
+  memcpy(&sphere->T[0][0],&eye4x4[0][0],16*sizeof(double));
+  memcpy(&sphere->Tinv[0][0],&eye4x4[0][0],16*sizeof(double));
+  sphere->textureMap=&texMap;
+  sphere->frontAndBack=0;
+  sphere->isLightSource=0;
+ }
+ return(sphere);
+}
+
+
+
+
+// cylinder intersection function
+void cylinderIntersect(struct object3D *cylinder, struct ray3D *ray, double *lambda, struct point3D *p, struct point3D *n, double *a, double *b)
+{
+
+// Computes and returns the value of 'lambda' at the intersection
+// between the specified ray and the specified cylinder.
+// the unit cylinder has height of 2 , r = 1, 
+
+double com_lambda;
+double t0, t1, t;
+double theta, theta2 , u, v;
+double z_max = 1.0;
+double z_min = -1.0;
+//tranform to model object
+struct point3D *ray_transformed_p0 = newPoint(0, 0, 0, 1);
+struct point3D *ray_transformed_d = newPoint(0, 0, 0, 0);
+
+struct ray3D *ray_transformed = newRay(ray_transformed_p0, ray_transformed_d);
+rayTransform(ray, ray_transformed, cylinder);
+
+
+double A, B, C;
+A = powf(ray_transformed->d.px,2) + powf(ray_transformed->d.pz,2);
+B = 2 * ray_transformed->p0.px * ray_transformed->d.px + 2 * ray_transformed->p0.pz * ray_transformed->d.pz;
+C = powf(ray_transformed->p0.px, 2) + powf(ray_transformed->p0.pz,2) - 1;
+
+
+if(A == 0 || B*B - 4*A*C < 0){
+  com_lambda = -1;
+  memcpy(lambda, &com_lambda, sizeof(double));
+  return;
+}
+
+t0 = (-B - sqrtf(B*B -4*A*C)) / ( 2*A);
+t1 = (-B + sqrtf(B*B -4*A*C)) / ( 2*A);
+
+//both t0, t1 pass
+if (t0>t1){
+  double tmp = t0;t0=t1;t1=tmp;
+}
+double y0 = ray_transformed->p0.py + t0 * ray_transformed->d.py;
+double y1 = ray_transformed->p0.py + t1 * ray_transformed->d.py;
+struct point3D* normal_p;
+
+if(y0 < - 1){
+  if(y1<-1){
+    t = -1;
+    memcpy(lambda, &t, sizeof(double));
+    return;
+  }
+  else{
+    //hit the cap
+    double th = t0 + (t1-t0) * (y0+1) / (y0-y1);
+    if(th <= 0){
+      t = -1;
+      memcpy(lambda, &t, sizeof(double));
+      return;
+    }
+
+
+    rayPosition(ray_transformed, th, p);
+    normal_p  = newPoint(0, -1, 0, 0);
+    //convert intersection point to world coordinates now
+    memcpy(lambda, &th, sizeof(double));
+    matVecMult(cylinder->T, p); 
+    //normal vector
+    normalTransform(normal_p, n, cylinder);
+    return;
+  }
+}
+else if(y0 >= -1 && y0 <= 1){
+    //hit the cylinder bit
+    if(t0<=0){
+       t = -1;
+       memcpy(lambda, &t, sizeof(double));
+       return;
+    }
+    rayPosition(ray_transformed, t0, p);
+    normal_p  = newPoint(p->px, 0, p->pz, 0);
+    memcpy(lambda, &t0, sizeof(double));
+    matVecMult(cylinder->T, p); 
+    //normal vector
+    normalTransform(normal_p, n, cylinder);
+    return;
+}
+else if (y0 > 1){
+  if(y1>1){
+       t = -1;
+       memcpy(lambda, &t, sizeof(double));
+       return;
+  }
+  else{
+    //hit the cap
+    double th = t0 + (t1-t0) * (y0-1) / (y0-y1);
+    if (th<=0) {
+       t = -1;
+       memcpy(lambda, &t, sizeof(double));
+       return ;
+    }
+    rayPosition(ray_transformed, th, p);
+    normal_p  = newPoint(0, 1, 0, 0);
+    memcpy(lambda, &th, sizeof(double));
+    matVecMult(cylinder->T, p); 
+    //normal vector
+    normalTransform(normal_p, n, cylinder);
+    return;
+  }
+}
+
+  // return false
+t = -1;
+memcpy(lambda, &t, sizeof(double));
+return;
+}
+
+
+
+
 ///////////////////////////////////////////////////////////////////////////////////////
 // TO DO:
 //	Complete the functions that compute intersections for the canonical plane
@@ -245,6 +405,16 @@ else{
   
   // if intersection within x[1, -1] and y[1, -1]
   if(intersect_p->px <= 1 && intersect_p->px >= -1 && intersect_p->py >= -1 && intersect_p->py <= 1){
+    //compute texture u, v
+    if(plane->texImg != NULL){
+   
+      double u=(intersect_p->px-(-1))/2 ;
+      double v=(1-intersect_p->py)/2;
+      printf("u is %f %f\n", u, v);
+      *a = u;
+      *b = v;
+
+    }
 
     //convert intersection point to world coordinates now
     matVecMult(plane->T, intersect_p);
@@ -280,8 +450,7 @@ double text_R, text_G, text_B;
 double com_lambda;
 double t1;
 double t2;
-double theta1, theta2;
-double u, v;
+double theta, theta2 , u, v;
 //tranform to model object
 struct point3D *ray_transformed_p0 = newPoint(0, 0, 0, 1);
 struct point3D *ray_transformed_d = newPoint(0, 0, 0, 0);
@@ -309,8 +478,8 @@ else if(B*B - 4*A*C < 0){
 }
 else{
   //compute lambda
-  t1 = (-B - sqrt(B*B - (4*A*C))) / (2*A);
-  t2 = (-B + sqrt(B*B - (4*A*C))) / (2*A);
+  t1 = (-B - sqrtf(B*B - (4*A*C))) / (2*A);
+  t2 = (-B + sqrtf(B*B - (4*A*C))) / (2*A);
   //choose first hit
   if (t1 > 0 && t2 >0){
      com_lambda = t1;
@@ -327,20 +496,47 @@ else{
   }
   //compute the intersection point with lambda
   rayPosition(ray_transformed, t1, p);
+  
 
-  //compute a, b 
+  // compute u v
+  if(p->pz > 1){
+   theta = 0;
+  }
+  else if (p->pz < -1){
+    theta = PI;
+  }
+  else{
+    theta = acos(p->pz);
+  }
+  theta2 = atan(p->py/p->px);
+  
+  if(p->px > 0 && p->py >= 0){
+    u = theta2/(2*PI);
+  }
+  if(p->px < 0){
+    u = (PI + theta2) /(2*PI);
+  }
+  if(p->px > 0 && p->py < 0){
+    u = (2*PI+theta2) / (2 * PI);
+  }
 
-  // theta1 = acos(p->pz/1);
-  // theta2 = atan(p->py/p->px);
-  // u =fmod(theta2, 2*PI) / (2*PI);
-  // v = (PI - theta1) / PI;
+  v =(PI - theta) /PI;
 
-  u = 0.5 + atan2(p->pz, p->px) / (2*PI);
-  v = 0.5 - asin(p->py)/PI;
+  if(u< 0){
+    u =0;
+  } 
+  if(u> 1){
+    u =1;
+  } 
+  if(v< 0){
+    v =0;
+  } 
+  if(v> 1){
+    v =1;
+  }
 
   memcpy(a, &u, sizeof(double));
   memcpy(b, &v, sizeof(double));
-  
 
   //compute normal point
   struct point3D* normal_p;
@@ -350,13 +546,14 @@ else{
   memcpy(lambda, &t1, sizeof(double));
   //convert intersection point to world coordinates now
   matVecMult(sphere->T, p); 
+
   //normal vector
   normalTransform(normal_p, n, sphere);
 
 }
 
-
 }
+
 
 
 void loadTexture(struct object3D *o, const char *filename)
@@ -373,6 +570,7 @@ void loadTexture(struct object3D *o, const char *filename)
   o->texImg=readPPMimage(filename);	// Allocate new texture
  }
 }
+
 
 
 void texMap(struct image *img, double a, double b, double *R, double *G, double *B)
@@ -397,22 +595,75 @@ void texMap(struct image *img, double a, double b, double *R, double *G, double 
  // coordinates. Your code should use bi-linear
  // interpolation to obtain the texture colour.
  //////////////////////////////////////////////////
+ 
+
+
+ // int i, j,sx, sy;
+ // sx = img->sx;
+ // i = (int)floor(a*(img->sx));
+ // j = (int)floor(b*(img->sy));
+ // double *rgbIm = (double *)img->rgbdata;
+ // double c_r = rgbIm[(j*sx+i)*3];
+ // double c_g = rgbIm[(j*sx+i)*3+1];
+ // double c_b = rgbIm[(j*sx+i)*3+2];
+ // *(R) = c_r;
+ // *(G) = c_g;
+ // *(B) = c_b;
+ 
 
  int i;
  int j;
- double r, g, b_1;
+ double c_i_j_r, c_i_j_g, c_i_j_b;
+ double c_i_1_j_r, c_i_1_j_g, c_i_1_j_b;
+ double c_i_j_1_r, c_i_j_1_g, c_i_j_1_b;
+ double c_i_1_j_1_r, c_i_1_j_1_g, c_i_1_j_1_b;
+ double a_prime, b_prime;
+ double c_r, c_g, c_b;
+
+
  i = (int)floor(a*(img->sx));
  j = (int)floor(b*(img->sy));
- unsigned char *rgbIm = (unsigned char *)img->rgbdata;
- // *(R) = 0;
- // *(G) = 0;
- // *(B) = 0;
- r = rgbIm[(i*img->sx+j)*3];
- g = rgbIm[(i*img->sx+j)*3+1];
- b_1 = rgbIm[(i*img->sx+j)*3+2];
- *(R) = r / 255;
- *(G) = g / 255;
- *(B) = b_1 / 255;
+ a_prime = a*(img->sx) - floor(a*(img->sx));
+ b_prime = b*(img->sy) - floor(b*(img->sy));
+ double *rgbIm = (double *)img->rgbdata;
+
+ //Ci,j
+ c_i_j_r = rgbIm[(j*img->sx+i)*3];
+ c_i_j_g = rgbIm[(j*img->sx+i)*3+1];
+ c_i_j_b = rgbIm[(j*img->sx+i)*3+2];
+
+ //Ci+1,j
+
+ c_i_1_j_r = rgbIm[((j+1)*img->sx+i)*3];
+
+ c_i_1_j_g = rgbIm[((j+1)*img->sx+i)*3+1];
+
+ c_i_1_j_b = rgbIm[((j+1)*img->sx+i)*3+2];
+
+ //Ci,j+1
+ c_i_j_1_r = rgbIm[(j*img->sx+(i+1))*3];
+ c_i_j_1_g = rgbIm[(j*img->sx+(i+1))*3+1];
+ c_i_j_1_b = rgbIm[(j*img->sx+(i+1))*3+2];
+
+ //Ci+1,j+1
+ c_i_1_j_1_r = rgbIm[((j+1)*img->sx+(i+1))*3];
+ c_i_1_j_1_g = rgbIm[((j+1)*img->sx+(i+1))*3+1];
+ c_i_1_j_1_b = rgbIm[((j+1)*img->sx+(i+1))*3+2];
+
+ //formula
+ c_r = (1-a_prime)*(1-b_prime)*c_i_j_r + a_prime*(1-b_prime)*c_i_1_j_r+
+ (1-a_prime)*b_prime*c_i_j_1_r  + a_prime * b_prime * c_i_1_j_1_r;
+
+ c_g = (1-a_prime)*(1-b_prime)*c_i_j_g + a_prime*(1-b_prime)*c_i_1_j_g+
+ (1-a_prime)*b_prime*c_i_j_1_g  + a_prime * b_prime * c_i_1_j_1_g;
+
+ c_b = (1-a_prime)*(1-b_prime)*c_i_j_b + a_prime*(1-b_prime)*c_i_1_j_b+
+ (1-a_prime)*b_prime*c_i_j_1_b  + a_prime * b_prime * c_i_1_j_1_b;
+
+ *(R) = c_r ;
+ *(G) = c_g ;
+ *(B) = c_b ;
+
 
  return;
 }
@@ -713,7 +964,6 @@ struct view *setupView(struct point3D *e, struct point3D *g, struct point3D *up,
  */
  struct view *c;
  struct point3D *u, *v;
-
  u=v=NULL;
 
  // Allocate space for the camera structure
@@ -723,6 +973,7 @@ struct view *setupView(struct point3D *e, struct point3D *g, struct point3D *up,
   fprintf(stderr,"Out of memory setting up camera model!\n");
   return(NULL);
  }
+
 
  // Set up camera center and axes
  c->e.px=e->px;		// Copy camera center location, note we must make sure
@@ -882,7 +1133,7 @@ struct image *readPPMimage(const char *filename)
   im->sx=sizx;
   im->sy=sizy;
 
-  fgets(&line[0],9,f);  	                // Read the remaining header line
+  fgets(&line[0],9,f);                    // Read the remaining header line
   fprintf(stderr,"%s\n",line);
   tmp=(unsigned char *)calloc(sizx*sizy*3,sizeof(unsigned char));
   fRGB=(double *)calloc(sizx*sizy*3,sizeof(double));
@@ -981,7 +1232,7 @@ void cleanup(struct object3D *o_list, struct pointLS *l_list)
  struct object3D *p, *q;
  struct pointLS *r, *s;
 
- p=o_list;		// De-allocate all memory from objects in the list
+ p=o_list;    // De-allocate all memory from objects in the list
  while(p!=NULL)
  {
   q=p->next;
