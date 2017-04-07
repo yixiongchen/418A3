@@ -343,8 +343,7 @@ else if (y0 > 1){
     return;
   }
 }
-
-  // return false
+// return false
 t = -1;
 memcpy(lambda, &t, sizeof(double));
 return;
@@ -400,17 +399,15 @@ else{
     }
   }
   else{
-     normal_p  = newPoint(0, 0, 1, 0);
+     normal_p  = newPoint(0, 0, -1, 0);
   }
   
   // if intersection within x[1, -1] and y[1, -1]
   if(intersect_p->px <= 1 && intersect_p->px >= -1 && intersect_p->py >= -1 && intersect_p->py <= 1){
     //compute texture u, v
     if(plane->texImg != NULL){
-   
-      double u=(intersect_p->px-(-1))/2 ;
-      double v=(1-intersect_p->py)/2;
-      printf("u is %f %f\n", u, v);
+      double u=(intersect_p->px-(-1))/2  ;
+      double v=(1-intersect_p->py)/2 ;
       *a = u;
       *b = v;
 
@@ -556,6 +553,10 @@ else{
 
 
 
+
+
+
+
 void loadTexture(struct object3D *o, const char *filename)
 {
  // Load a texture image from file and assign it to the
@@ -570,6 +571,8 @@ void loadTexture(struct object3D *o, const char *filename)
   o->texImg=readPPMimage(filename);	// Allocate new texture
  }
 }
+
+
 
 
 
@@ -595,24 +598,12 @@ void texMap(struct image *img, double a, double b, double *R, double *G, double 
  // coordinates. Your code should use bi-linear
  // interpolation to obtain the texture colour.
  //////////////////////////////////////////////////
- 
+ //Ci, j+1
 
-
- // int i, j,sx, sy;
- // sx = img->sx;
- // i = (int)floor(a*(img->sx));
- // j = (int)floor(b*(img->sy));
- // double *rgbIm = (double *)img->rgbdata;
- // double c_r = rgbIm[(j*sx+i)*3];
- // double c_g = rgbIm[(j*sx+i)*3+1];
- // double c_b = rgbIm[(j*sx+i)*3+2];
- // *(R) = c_r;
- // *(G) = c_g;
- // *(B) = c_b;
- 
 
  int i;
  int j;
+ int sx, sy;
  double c_i_j_r, c_i_j_g, c_i_j_b;
  double c_i_1_j_r, c_i_1_j_g, c_i_1_j_b;
  double c_i_j_1_r, c_i_j_1_g, c_i_j_1_b;
@@ -620,36 +611,42 @@ void texMap(struct image *img, double a, double b, double *R, double *G, double 
  double a_prime, b_prime;
  double c_r, c_g, c_b;
 
-
+ sx = img->sx;
+ sy = img->sy;
  i = (int)floor(a*(img->sx));
  j = (int)floor(b*(img->sy));
  a_prime = a*(img->sx) - floor(a*(img->sx));
  b_prime = b*(img->sy) - floor(b*(img->sy));
- double *rgbIm = (double *)img->rgbdata;
+ double *rgbIm = (double*)img->rgbdata;
 
- //Ci,j
- c_i_j_r = rgbIm[(j*img->sx+i)*3];
- c_i_j_g = rgbIm[(j*img->sx+i)*3+1];
- c_i_j_b = rgbIm[(j*img->sx+i)*3+2];
+// check i and j
+if(i+1>=sx){
+   i = i-1; 
+}
+if(j+1>=sy){
+   j = j-1;
+}
 
- //Ci+1,j
+//Ci,j
+c_i_j_r = rgbIm[(j*img->sx+i)*3];
+c_i_j_g = rgbIm[(j*img->sx+i)*3+1];
+c_i_j_b = rgbIm[(j*img->sx+i)*3+2];
 
- c_i_1_j_r = rgbIm[((j+1)*img->sx+i)*3];
+//Ci+1,j
+c_i_1_j_r = rgbIm[(j*img->sx+(i+1))*3];
+c_i_1_j_g = rgbIm[(j*img->sx+(i+1))*3+1];
+c_i_1_j_b = rgbIm[(j*img->sx+(i+1))*3+2];
 
- c_i_1_j_g = rgbIm[((j+1)*img->sx+i)*3+1];
+c_i_j_1_r = rgbIm[((j+1)*img->sx+i)*3];
+c_i_j_1_g = rgbIm[((j+1)*img->sx+i)*3+1];
+c_i_j_1_b = rgbIm[((j+1)*img->sx+i)*3+2];
 
- c_i_1_j_b = rgbIm[((j+1)*img->sx+i)*3+2];
+//Ci+1,j+1
+c_i_1_j_1_r = rgbIm[((j+1)*img->sx+(i+1))*3];
+c_i_1_j_1_g = rgbIm[((j+1)*img->sx+(i+1))*3+1];
+c_i_1_j_1_b = rgbIm[((j+1)*img->sx+(i+1))*3+2];
 
- //Ci,j+1
- c_i_j_1_r = rgbIm[(j*img->sx+(i+1))*3];
- c_i_j_1_g = rgbIm[(j*img->sx+(i+1))*3+1];
- c_i_j_1_b = rgbIm[(j*img->sx+(i+1))*3+2];
-
- //Ci+1,j+1
- c_i_1_j_1_r = rgbIm[((j+1)*img->sx+(i+1))*3];
- c_i_1_j_1_g = rgbIm[((j+1)*img->sx+(i+1))*3+1];
- c_i_1_j_1_b = rgbIm[((j+1)*img->sx+(i+1))*3+2];
-
+ 
  //formula
  c_r = (1-a_prime)*(1-b_prime)*c_i_j_r + a_prime*(1-b_prime)*c_i_1_j_r+
  (1-a_prime)*b_prime*c_i_j_1_r  + a_prime * b_prime * c_i_1_j_1_r;
@@ -664,9 +661,104 @@ void texMap(struct image *img, double a, double b, double *R, double *G, double 
  *(G) = c_g ;
  *(B) = c_b ;
 
-
  return;
 }
+
+
+//Environment mapping convert x y z to u, v
+void convert_xyz_to_cube_uv(double x, double y, double z, double *index, double *u, double *v)
+{
+  float absX = fabs(x);
+  float absY = fabs(y);
+  float absZ = fabs(z);
+  
+  int isXPositive = x > 0 ? 1 : 0;
+  int isYPositive = y > 0 ? 1 : 0;
+  int isZPositive = z > 0 ? 1 : 0;
+  
+  float maxAxis, uc, vc;
+  
+  // POSITIVE X
+  if (isXPositive && absX >= absY && absX >= absZ) {
+    // u (0 to 1) goes from +z to -z
+    // v (0 to 1) goes from -y to +y
+    maxAxis = absX;
+    uc = -z;
+    vc = y;
+    *index = 0;
+  }
+  // NEGATIVE X
+  if (!isXPositive && absX >= absY && absX >= absZ) {
+    // u (0 to 1) goes from -z to +z
+    // v (0 to 1) goes from -y to +y
+    maxAxis = absX;
+    uc = z;
+    vc = y;
+    *index = 1;
+  }
+  // POSITIVE Y
+  if (isYPositive && absY >= absX && absY >= absZ) {
+    // u (0 to 1) goes from -x to +x
+    // v (0 to 1) goes from +z to -z
+    maxAxis = absY;
+    uc = x;
+    vc = -z;
+    *index = 2;
+  }
+  // NEGATIVE Y
+  if (!isYPositive && absY >= absX && absY >= absZ) {
+    // u (0 to 1) goes from -x to +x
+    // v (0 to 1) goes from -z to +z
+    maxAxis = absY;
+    uc = x;
+    vc = z;
+    *index = 3;
+  }
+  // POSITIVE Z
+  if (isZPositive && absZ >= absX && absZ >= absY) {
+    // u (0 to 1) goes from -x to +x
+    // v (0 to 1) goes from -y to +y
+    maxAxis = absZ;
+    uc = x;
+    vc = y;
+    *index = 4;
+  }
+  // NEGATIVE Z
+  if (!isZPositive && absZ >= absX && absZ >= absY) {
+    // u (0 to 1) goes from +x to -x
+    // v (0 to 1) goes from -y to +y
+    maxAxis = absZ;
+    uc = -x;
+    vc = y;
+    *index = 5;
+  }
+
+  // Convert range from -1 to 1 to 0 to 1
+  *u = 0.5f * (uc / maxAxis + 1.0f);
+  *v = 0.5f * (vc / maxAxis + 1.0f);
+}
+
+
+// convert u, v to x y z;
+void convert_cube_uv_to_xyz(int index, double u, double v, double *x, double *y, double *z)
+{
+  // convert range 0 to 1 to -1 to 1
+  float uc = 2.0f * u - 1.0f;
+  float vc = 2.0f * v - 1.0f;
+  switch (index)
+  {
+    case 0: *x =  1.0f; *y =    vc; *z =   -uc; break;  // POSITIVE X
+    case 1: *x = -1.0f; *y =    vc; *z =    uc; break;  // NEGATIVE X
+    case 2: *x =    uc; *y =  1.0f; *z =   -vc; break;  // POSITIVE Y
+    case 3: *x =    uc; *y = -1.0f; *z =    vc; break;  // NEGATIVE Y
+    case 4: *x =    uc; *y =    vc; *z =  1.0f; break;  // POSITIVE Z
+    case 5: *x =   -uc; *y =    vc; *z = -1.0f; break;  // NEGATIVE Z
+  }
+}
+
+
+
+
 
 void insertObject(struct object3D *o, struct object3D **list)
 {
@@ -726,44 +818,42 @@ void addAreaLight(float sx, float sy, float nx, float ny, float nz,\
   
   //create area light rectangle plane, lightsource=1
   struct object3D *o;
+  double du, dv;
   o=newPlane(.05,.75,.05,.05,.55,.8,.75,1,1,2);
-  // size  size (sx, sy)
+  // unit normal vector (0, 0, 1)
+  // mark this object as light source
+  o->isLightSource = 1;
   Scale(o,sx,sy,1);
-  //RotateZ(o,PI/1.5);
-  // rotate with normal vector
-  // original normal vector[0, 0, 1, 0]
-  // current normal vector[nx, ny, nz, 0]
-  //RotateY(o,PI/2);
-  RotateZ(o,PI/1.5);
-  Translate(o,tx,ty,tz);
-  invert(&o->T[0][0],&o->Tinv[0][0]);    // Very important! compute
-            // and store the inverse
-             // transform for this object!
-  //insertObject(o,o_list);
+  // rotate
+  // unit normal vector (0, 0, 1)
+  double z_angle = acos((nx*0+ny*0)/(sqrtf(nx*nx+ny*ny) + sqrtf(0*0 + 0*0)));
+  double y_angle = acos((nx*0+nz*1)/(sqrtf(nx*nx+nz*nz) + sqrtf(0*0 + 1*1)));
+  double x_angle = acos((ny*0+nz*1)/(sqrtf(ny*ny+nz*nz) + sqrtf(0*0 + 1*1)));
+  RotateZ(o,z_angle);
+  RotateX(o,x_angle);
+  RotateY(o,y_angle);
 
-  //generate light source point
+  Translate(o,tx,ty,tz);
+  invert(&o->T[0][0],&o->Tinv[0][0]);
+  insertObject(o, o_list);
+  
+  du = (double)2.0/lx;
+  dv = (double)2.0/ly;
   int i, j;
   struct pointLS *l;
-  for (i=0; i<8; i++){
-    for(j=0; j<8; j++){
+  for (i=0; i<lx; i++){
+    for(j=0; j<ly; j++){
       struct point3D p;
-      p.px= -1+ i* 0.25+ 0.125;
-      p.py= 1 -j* 0.25 - 0.125;
+      p.px= -1+ i*du+(du/2);
+      p.py= -1+ j*dv+(dv/2);
       p.pz= 0;
       p.pw= 1;  
       //transform lights point into world coordinate
       matVecMult(o->T, &p);
- 
-      if(i >= 0){
-        l=newPLS(&p,r/64,g/64,b/64);
-        printf("point is %f %f %f\n", p.px, p.py, p.pz);
-        insertPLS(l, l_list);
-      }
-
+      l=newPLS(&p,r/(lx*ly),g/(lx*ly),b/(lx*ly));
+      insertPLS(l, l_list);
     }
   }
-
-
 }
 
 ///////////////////////////////////

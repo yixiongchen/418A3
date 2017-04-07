@@ -1,6 +1,17 @@
-During the A3, I found the most difficult part is the recrsive ray trace.
-In order to the accumulate the color, I have to handle the realtionship among
-the functions rshape, raytrace and findfirsthit. At first, I could not get the 
-correct color, then I spent a lots of time sloving this problem. Another things was the
-how to alllocate meomory for object and free them correctly. It often caused segmentaion 
-fault. This assignment is great and I learned a lot about graphical images.
+A4 report:
+To run the code:
+1. first run compile.sh which compile all the codes
+2. execute ./RayTracer 1024 depth anti-aliasing a4.ppm
+Notice: if you turn on anti-aliasing, you need enough main memory to run it.
+
+Reason: I seperate my scene into unique anti-alising and non-antialising because combine them takes too much 
+memory, my computer can not support such much memory.
+
+There are two scenes, one has only anti-aliasing impleneted. Another has all other features implemented.
+
+
+For the basic part: I think the area light source is the most difficult. It takes much time to figure
+out to how to do soft shadows. Finally I found that I caluculated incorrect lambda which caused the error.
+I think the most meaningful part is the scene, I use moon, earth for texture map and create a scene of universe. space. I got a lot of fun from it. The helper funtions such as matrix addition, mutiply and vector mutiplication. These functions saved me a lot of time. They are really helpful. 
+
+For advanced part:I choose to do Texture map , draw a cylinder and glossy reflection. I found the hardest part is the texture map, it sometimes cause segmentation fault. It is very important to focus on the u, v calculation. 

@@ -69,6 +69,7 @@ void buildScene(void)
  // Let's add a plane
  // Note the parameters: ra, rd, rs, rg, R, G, B, alpha, r_index, and shinyness)
  o=newPlane(.05,.75,.05,.05,.55,.8,.75,1,1,2);
+ //o=newPlane(0.05,0.75,0,.05,.55,.8,.75,1,1,2);
  //o=newPlane(0,0.75,0.75,0,.55,.8,.75,1,1,2);	// Note the plane is highly-reflective (rs=rg=.75) so we
 						// should see some reflections if all is done properly.
 						// Colour is close to cyan, and currently the plane is
@@ -85,6 +86,7 @@ void buildScene(void)
  
  // Let's add a couple spheres
  o=newSphere(.05,.95,.35,.35,1,.25,.25,1,1,6);
+ //o=newSphere(0.05,0.95,0,.35,1,.25,.25,1,1,6);
  Scale(o,.75,.5,1.5);
  RotateY(o,PI/2);
  Translate(o,-1.45,1.1,3.5);
@@ -92,32 +94,37 @@ void buildScene(void)
  insertObject(o,&object_list);
 
  o=newSphere(.05,.95,.95,.75,.75,.95,.55,1,1,6);
+ //o=newSphere(0.05,0.95,0,.75,.75,.95,.55,1,1,6);
  Scale(o,.5,2.0,1.0);
  RotateZ(o,PI/1.5);
  Translate(o,1.75,1.25,5.0);
  invert(&o->T[0][0],&o->Tinv[0][0]);
  insertObject(o,&object_list);
- //loadTexture(o, "earth.ppm");
 
- //Insert a single point light source.
- p.px=0;
- p.py=15.5;
- p.pz=-5.5;
- p.pw=1;
- l=newPLS(&p,.95,.95,.95);
- insertPLS(l,&light_list);
 
  //add area light source
- //int sx = 1;
- //int sy = 1;
- //addAreaLight(1, 1, 0, 0, 0, -10, 25.5, -5.5, 4, 4, 0.95, 0.95, 0.95, &object_list, &light_list);
+ int sx = 1.0;
+ int sy = 1.0;
+ int lx = 1;
+ int ly = 1;
+ double px = 0;
+ double py =15.5;
+ double pz =-5.0;
+ double r = 0.95;
+ double g = 0.95;
+ double b = 0.95;
+ double n_p_x = 1;
+ double n_p_y = 2;
+ double n_p_z = 1;
+ addAreaLight(sx, sy, n_p_x, n_p_y, n_p_z, px, py, pz, lx, ly, r, g, b, &object_list, &light_list);
+
  // End of simple scene for Assignment 3
  // Keep in mind that you can define new types of objects such as cylinders and parametric surfaces,
  // or, you can create code to handle arbitrary triangles and then define objects as surface meshes.
  //
  // Remember: A lot of the quality of your scene will depend on how much care you have put into defining
  //           the relflectance properties of your objects, and the number and type of light sources
- //           in the scene.
+ //           in the scene. 
 }
 
 
@@ -136,18 +143,17 @@ void buildOwnScene(void){
   RotateZ(o,PI/1);
   Translate(o,1.75, 1.25, 5.0);
   invert(&o->T[0][0],&o->Tinv[0][0]);
+  loadTexture(o, "./texture/earth.ppm");
   insertObject(o,&object_list);
-  loadTexture(o, "earth.ppm");
-  
 
+  
   //moon
-  o=newSphere(.05,.95,.85,.75,1,0.7,0.2,1,1,6);
+  o=newSphere(.05,.45,.85,.75,1,0.7,0.2,1,1,6);
   Scale(o,1,1,1);
   Translate(o,-2.5, 2, 4.5);
   invert(&o->T[0][0],&o->Tinv[0][0]);
+  loadTexture(o, "./texture/moon.ppm");
   insertObject(o,&object_list);
-
-
 
 
   //marz
@@ -155,48 +161,47 @@ void buildOwnScene(void){
   Scale(o,1.1,1.1,1.1);
   Translate(o,-2.5,-0.5,4.5);
   invert(&o->T[0][0],&o->Tinv[0][0]);
+  loadTexture(o, "./texture/mars.ppm");
   insertObject(o,&object_list);
-  loadTexture(o, "mars.ppm");
-
-
-  //plane
-  o=newPlane(.05,.75,.05,.0,.55,.8,.75,1,1,2);
-              // meaningless since alpha=1
-  Scale(o,20,20,1);        // Do a few transforms...
+  
+  
+  //space plane
+  o=newPlane(.05,.75,.05,.05,.55,.8,.75,1,1,2);       
+  Scale(o,10,10,1);       
   RotateZ(o,PI/1.20);
   RotateX(o,PI/2.25);
   Translate(o,0,-3,10);
-  invert(&o->T[0][0],&o->Tinv[0][0]);    // Very important! compute
-            // and store the inverse
-            // transform for this object!
-  insertObject(o,&object_list);      // Insert into object list
+  invert(&o->T[0][0],&o->Tinv[0][0]);  
+  loadTexture(o, "./texture/water.ppm");  
+  insertObject(o,&object_list);      
 
 
   //cylinder
-    //plane
-  o=newCylinder(.05,.85,.75,.75,0.99,0.21,0,1,1,6);
-              // meaningless since alpha=1
-  Scale(o,0.3,0.5,0.3);
-       // Do a few transforms...
-  Translate(o,-0.5,-1.4,4.5);
-  invert(&o->T[0][0],&o->Tinv[0][0]);    // Very important! compute
-            // and store the inverse
-            // transform for this object!
-  insertObject(o,&object_list);      // Insert into object list
+  o=newCylinder(.05,.45,.45,.01,0.99,0.53,0,1,1,6);
+  Scale(o,0.3,2,0.3);
+  RotateZ(o,PI/1.6);
+  RotateY(o,PI/4);
+  Translate(o,0.3,-1.9,4.5);
+  invert(&o->T[0][0],&o->Tinv[0][0]);            
+  insertObject(o,&object_list);      
 
-  
-  //Insert a single point light source.
-  p.px=0;
-  p.py=15.5;
-  p.pz=-5.5;
-  p.pw=1;
-  l=newPLS(&p,.95,.95,.95);
-  insertPLS(l,&light_list);
-  //light area implementation
-  //addAreaLight(1, 1, 0, 0, 0, -10, 25.5, -5.5, 4, 4, 0.95, 0.95, 0.95, &object_list, &light_list);
-  
+
+ //Insert a single point light source.
+ int sx = 1;
+ int sy = 1;
+ int lx = 5;
+ int ly = 5;
+ double px = 0;
+ double py =15.5;
+ double pz =-5.0;
+ double r = 0.95;
+ double g = 0.95;
+ double b = 0.95;
+ double n_p_x = 1;
+ double n_p_y = 2;
+ double n_p_z = 1;
+ addAreaLight(sx, sy, n_p_x, n_p_y, n_p_z, px, py, pz, lx, ly, r, g, b, &object_list, &light_list);
 }
-
 
 
 
@@ -238,51 +243,48 @@ void rtShade(struct object3D *obj, struct point3D *p, struct point3D *n, struct 
   
   obj->textureMap(obj->texImg, a, b, &R,&G,&B);
   
-
  }
 
  //////////////////////////////////////////////////////////////
  // TO DO: Implement this function. Refer to the notes for
  // details about the shading model.
  //////////////////////////////////////////////////////////////
- double lambda = -1;
- double a_tmp = 0;
- double b_tmp = 0;
- int num_lights = 0;
- struct object3D *hit_obj;
- struct point3D p_tmp;
- struct point3D n_tmp;
+
+
  //light source list
  struct pointLS *source;
- // loop over light in the scene
+ // loop over light in the light list
  for(source=light_list; source != NULL; source=source->next){
+  double a_tmp = 0;
+  double b_tmp = 0;
+  int num_lights = 0;
+  struct object3D *hit_obj;
+  struct point3D p_tmp;
+  struct point3D n_tmp;
 
-  // count number of light sources
-  num_lights += 1;
-  //light source point
+  //light source point position
   struct point3D p0 = source->p0;
+  //light source color
   struct colourRGB lightcolor = source->col; 
 
-  //create a shadow ray from intersection to light
+  //create a shadow ray from intersection point to light source point
   struct point3D *shadow_d = newPoint(p0.px - p->px, p0.py - p->py, p0.pz - p->pz, 1);
   struct ray3D *shadowRay = newRay(p, shadow_d);
 
-  //variables to indicate object intersected by shadow ray
-  //find intersection for shadow
-  
+  //find intersection for shadow ray
+  double lambda = -1;
   findFirstHit(shadowRay, &lambda, obj, &hit_obj, &p_tmp, &n_tmp, &a_tmp, &b_tmp);
   
   //if there is a intersection in shadow ray path
   if (lambda > 0 && lambda < 1){
     // use ambient for shadow
-    tmp_col.R += obj->alb.ra*lightcolor.R*R;
-    tmp_col.G += obj->alb.ra*lightcolor.G*G;
-    tmp_col.B += obj->alb.ra*lightcolor.B*B;   
+    tmp_col.R += 0;
+    tmp_col.G += 0;
+    tmp_col.B += 0;   
   }
   
   //there is no intersection in shadow ray path then compute color
   else{
-    srand(time(NULL));
     //get albedos a, d, s
     struct albedosPhong alb = obj->alb;
     double ka = alb.ra;
@@ -326,7 +328,7 @@ void rtShade(struct object3D *obj, struct point3D *p, struct point3D *n, struct 
     tmp_col.R += R * (phong * la);
     tmp_col.G += G * (phong * ld);
     tmp_col.B += B * (phong * ls);
-    
+   
     //free memory
     free(L_direct);
     free(N_direct);
@@ -340,59 +342,97 @@ col->R = tmp_col.R;
 col->G = tmp_col.G;
 col->B = tmp_col.B;
 
-
+//printf("in shade color is %f %f %f\n",col->R , col->R , col->R);
 //recrusion with depth
  if (depth < MAX_DEPTH){
-  
-  //reflective ray: create a reflected ray at the intersection;
-  struct ray3D *New_Ray = (struct ray3D*)malloc(sizeof(struct ray3D));
-  struct point3D *new_direct = (struct point3D *)malloc(sizeof(struct point3D));
+
+  struct point3D *new_direct =newPoint(0, 0, 0, 0);
   struct point3D* Ray_d = newPoint(-ray->d.px, -ray->d.py, -ray->d.pz, 0);
   // calculate reflective ray direction
+  normalize(n);
+  normalize(Ray_d);
   double num = dot(Ray_d, n);
   new_direct->px = 2*num * n->px - Ray_d->px;
   new_direct->py = 2*num * n->py - Ray_d->py;
   new_direct->pz = 2*num * n->pz - Ray_d->pz;
   new_direct->pw = 0;
   normalize(new_direct);
-
-
-  // //implement glossy on reflective ray
-  // //orthonormal basis
+  
+  // /*
+  //   Implementation: Glossy Reflection
+  // */
   // struct point3D * u = cross(new_direct, n);
   // normalize(u);
   // struct point3D * v = cross(new_direct, u);
   // normalize(v);
-  // //hoose uniformly
-  // double roughness;
-  // roughness = 0.6;
-  // double theta = 2 * PI * (0.3 *roughness);
-  // double phi = 2*PI*(0.4 *roughness);
-  // double x = sin(theta) * cos(phi);
-  // double y = sin(theta) * sin(phi);
-  // double z = cos(theta);
-  // // Convert sample to world coordinates using the orthonormal basis
-  // new_direct->px =  x * u->px + y * v->px + z * new_direct->px;
-  // new_direct->py =  x * u->py + y * v->py + z * new_direct->py;
-  // new_direct->pz =  x * u->pz + y * v->pz + z * new_direct->pz;
-  // new_direct->pw = 0;
-  // normalize(new_direct);
-  
+  // double roughness = 0.05;
+  // double reflect_R, reflect_G, reflect_B;
+  // reflect_R = 0;
+  // reflect_G = 0;
+  // reflect_B = 0;
+  // // number of reflection ray
+  // int count = 0;
+  // srand(time(NULL));
+  // // generate direction for each sample ray
+  // while(count < 10){
+  //   struct point3D* reflect_ray = newPoint(new_direct->px, new_direct->py, new_direct->pz, new_direct->pw);
+  //   double rand_num1 = (double)rand() / (double)RAND_MAX;
+  //   double rand_num2 = (double)rand() / (double)RAND_MAX;
+  //   double theta =  2 * PI * (rand_num1 *roughness);
+  //   double phi = 2 * PI *(rand_num2 *roughness);
+  //   double x = sin(theta) * cos(phi);
+  //   double y = sin(theta) * sin(phi);
+  //   double z = cos(theta);
+  //   // Convert sample to world coordinates using the orthonormal basis
+  //   reflect_ray->px =  x*u->px + y*v->px + z*reflect_ray->px;
+  //   reflect_ray->py =  x*u->py + y*v->py + z*reflect_ray->py;
+  //   reflect_ray->pz =  x*u->pz + y*v->pz + z*reflect_ray->pz;
+  //   reflect_ray->pw =  0;
+  //   normalize(reflect_ray);
 
-  //create reflective ray
-  New_Ray = newRay(p, new_direct);
-  //call ray trace
-  rayTrace(New_Ray, depth+1, col, obj);
-
-  //free
+  //   //check relfective angle 
+  //   double dot_v = dot(n, reflect_ray);
+  //   if(dot_v >= 0 ){
+  //     //create reflective ray
+  //     struct ray3D *New_Ray = newRay(p, reflect_ray);
+  //     //call ray trace
+  //     struct colourRGB sub_color;
+  //     sub_color.R = 0;
+  //     sub_color.G = 0;
+  //     sub_color.B = 0;
+  //     // store color from relfective ray
+  //     rayTrace(New_Ray, depth+1, &sub_color, obj);
+  //     reflect_R += sub_color.R;
+  //     reflect_G += sub_color.G;
+  //     reflect_B += sub_color.B;
+  //     count += 1;
+  //     free(New_Ray);
+  //   }
+  //   free(reflect_ray);
+  // }
+  // // get average color from samples
+  // col->R += (reflect_R / count);
+  // col->G += (reflect_G / count);
+  // col->B += (reflect_B / count);
+  struct ray3D *New_Ray = newRay(p, new_direct);
+  struct colourRGB sub_color;
+  sub_color.R = 0;
+  sub_color.G = 0;
+  sub_color.B = 0;
+  rayTrace(New_Ray, depth+1, &sub_color, obj);
+  col->R += sub_color.R;
+  col->G += sub_color.G;
+  col->B += sub_color.B;
+  //free 
+  //free(u);
+  //free(v);
   free(new_direct);
-  free(New_Ray);
   free(Ray_d);
 }
-
-
+return;
 
 }
+
 
 void findFirstHit(struct ray3D *ray, double *lambda, struct object3D *Os, struct object3D **obj, struct point3D *p, struct point3D *n, double *a, double *b)
 {
@@ -417,13 +457,12 @@ void findFirstHit(struct ray3D *ray, double *lambda, struct object3D *Os, struct
  struct point3D p_tmp;
  struct point3D n_tmp;
  double a_tmp, b_tmp;
-
  
  //loop over all objects in scene
  for(object=object_list; object!=NULL; object=object->next){
 
   //ensure we don't return a self-intersection
-  if(object != Os){
+  if(object != Os ){
     //find the intersection object and get the lambda
     object->intersect(object, ray, &lambda_closest, &p_tmp, &n_tmp, &a_tmp, &b_tmp);
 
@@ -434,10 +473,8 @@ void findFirstHit(struct ray3D *ray, double *lambda, struct object3D *Os, struct
       *obj = object;
       //get intersection point
       *p = p_tmp;
-
       //get the normal at the intersection
       *n= n_tmp; 
-      
       // get texture coordinate
       *a = a_tmp;
       *b = b_tmp;
@@ -479,7 +516,7 @@ void rayTrace(struct ray3D *ray, int depth, struct colourRGB *col, struct object
  // if you are unsure what to do here.
  ///////////////////////////////////////////////////////
 
- //find the first hitted object in object_list
+//find the first hitted object in object_list
 lambda = -1;
 a = 0;
 b = 0;
@@ -500,13 +537,11 @@ if (lambda > 0 ){
  
   rtShade(obj, &p, &n, ray, depth, a, b, &I); 
 
-
   //handle global phong: update current color + global
   if(Os != NULL){
-    col->R += Os->alb.rg * I.R;
-    col->G += Os->alb.rg * I.G;
-    col->B += Os->alb.rg * I.B;
-   
+    col->R += Os->alb.rg*I.R;
+    col->G += Os->alb.rg*I.G;
+    col->B += Os->alb.rg*I.B;
   }
   // if ray from camera
   else{
@@ -514,9 +549,7 @@ if (lambda > 0 ){
     col->G += I.G;
     col->B += I.B;
   }
-
 }
-
 
 }
 
@@ -583,7 +616,8 @@ int main(int argc, char *argv[])
  //        for Assignment 4 you need to create your own
  //        *interesting* scene.
  ///////////////////////////////////////////////////
- buildOwnScene();		// Create a scene. This defines all the
+ //buildScene();
+ buildScene();		// Create a scene. This defines all the
 			// objects in the world of the raytracer
 
  //////////////////////////////////////////
@@ -623,7 +657,6 @@ int main(int argc, char *argv[])
  // Note that the top-left corner of the window is at (-2, 2)
  // in camera coordinates.
  cam=setupView(&e, &g, &up, -3, -2, 2, 4);
-
  if (cam==NULL)
  {
   fprintf(stderr,"Unable to set up the view and camera parameters. Our of memory!\n");
@@ -664,7 +697,9 @@ int main(int argc, char *argv[])
 
  srand((unsigned int)time(NULL));
 
-  // mutiple threds
+
+
+// do ray trace for object
  #pragma omp parallel for
    for (j=0;j<sx;j++)		// For each of the pixels in the image
    {
@@ -688,9 +723,11 @@ int main(int argc, char *argv[])
         sub_color.B = 0.0;
         int x;
         int y;
+        int super_x = 3;
+        int super_y = 3;
         // for each sub pixel
-        for(x=0; x<4; x++){
-          for (y=0; y<4; y++){
+        for(x=0; x<super_x; x++){
+          for (y=0; y<super_y; y++){
             float random_1 = (float)rand() / (float)RAND_MAX;
             float r_1 = random_1 * 0.25;
             ran_num_x= (x*0.25) + r_1;
@@ -726,9 +763,10 @@ int main(int argc, char *argv[])
         }
 
         //Final Color of pixel is the average of all the samples.
-        sub_color.R  =  sub_color.R /16;
-        sub_color.G  =  sub_color.G /16;
-        sub_color.B  =  sub_color.B /16;
+        sub_color.R  =  sub_color.R /( super_x * super_y);
+        sub_color.G  =  sub_color.G /( super_x * super_y);
+        sub_color.B  =  sub_color.B /( super_x * super_y);
+
         //printf("color is col %f , %f, %f\n", sub_color.R, sub_color.G, sub_color.B);
 
         if(sub_color.R > 1){
@@ -778,7 +816,7 @@ int main(int argc, char *argv[])
         ray = newRay(&pc, &d);
         // ray trace
         rayTrace(ray, 0, &col, NULL);
-        
+
         // create image
         if(col.R > 1){
            rgbIm[(j*sx+i)*3] =255;

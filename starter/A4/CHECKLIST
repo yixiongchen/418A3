@@ -1,5 +1,5 @@
 CSC418/2504 - Winter 2017
-Checklist for Assignment 3
+Checklist for Assignment 4
 ----------------------------------------------------------------------------------
 
 Name:  Yixiong Chen
@@ -50,27 +50,28 @@ B. PLACE AN (X) IN FRONT OF PORTIONS OF THE ASSIGNMENT THAT YOU COMPLETED IN FUL
    YOUR PARTIAL IMPLEMENTATION, DETAILED COMMENTS IN YOUR CODE, ETC) THE MORE LIKELY IT IS 
    WE WILL BE ABLE TO MAKE AN ACCURATE ASSESSMENT
 
-				Completed   Partial   Not done   Mark
-[10 marks]  x Ray Casting
+				                    Completed         Partial     Not done         Mark
+[15 marks]  Anti-aliasing        x
+ 
+[20 marks]  Area light           x
+            sources
 
-[15 marks]  x Intersection	
-            for spheres
+[25 marks]  Implement a neat     x
+	         scene
 
-[15 marks]  x Intersection
-	    for square
+[10 marks]  Report               x
 
-[15 marks]  x Normal transforms
+[10 marks]  Glossy refections    x
 
-[15 marks]  x Local Phong
+[10 marks]  Texture-mapping      x
 
-[10 marks]  x Shadows
+[10 marks]  non-trivial compound x
+            object
 
-[15 marks]  x Global reflection
-
-[5 marks]   x Report
+[10 marks]  Multi-threading                        x
 
 [TA assigned]  Penalty marks
 
 
-Total for A3:							/100
+Total for A4:							/125
 
