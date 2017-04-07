@@ -263,12 +263,12 @@ void rtShade(struct object3D *obj, struct point3D *p, struct point3D *n, struct 
   struct point3D n_tmp;
 
   //light source point position
-  struct point3D p0 = source->p0;
+  struct point3D* p0 = &source->p0;
   //light source color
-  struct colourRGB lightcolor = source->col; 
+  struct colourRGB* lightcolor = &source->col; 
 
   //create a shadow ray from intersection point to light source point
-  struct point3D *shadow_d = newPoint(p0.px - p->px, p0.py - p->py, p0.pz - p->pz, 1);
+  struct point3D *shadow_d = newPoint(p0->px - p->px, p0->py - p->py, p0->pz - p->pz, 1);
   struct ray3D *shadowRay = newRay(p, shadow_d);
 
   //find intersection for shadow ray
@@ -291,16 +291,16 @@ void rtShade(struct object3D *obj, struct point3D *p, struct point3D *n, struct 
     double kd = alb.rd;
     double ks = alb.rs;
     //get light properties
-    double la =lightcolor.R;
-    double ld =lightcolor.G;
-    double ls =lightcolor.B;
+    double la =lightcolor->R;
+    double ld =lightcolor->G;
+    double ls =lightcolor->B;
 
     //view point ray
     struct point3D * V_direct = newPoint(-ray->d.px, -ray->d.py, -ray->d.pz, 0.0);
     //normal ray
     struct point3D * N_direct = newPoint(n->px, n->py, n->pz, 0.0);
     //incident light ray
-    struct point3D * L_direct = newPoint(p0.px-p->px, p0.py-p->py, p0.pz-p->pz, 0.0);
+    struct point3D * L_direct = newPoint(p0->px-p->px, p0->py-p->py, p0->pz-p->pz, 0.0);
    
     normalize(L_direct);
     normalize(N_direct);
@@ -372,7 +372,6 @@ col->B = tmp_col.B;
   reflect_B = 0;
   // number of reflection ray
   int count = 0;
-  srand(time(NULL));
   // generate direction for each sample ray
   while(count < 10){
     struct point3D* reflect_ray = newPoint(new_direct->px, new_direct->py, new_direct->pz, new_direct->pw);
@@ -421,6 +420,9 @@ col->B = tmp_col.B;
   free(new_direct);
   free(Ray_d);
 }
+
+
+
 return;
 
 }
@@ -721,12 +723,12 @@ int main(int argc, char *argv[])
         for(x=0; x<super_x; x++){
           for (y=0; y<super_y; y++){
             float random_1 = (float)rand() / (float)RAND_MAX;
-            float r_1 = random_1 * 0.25;
-            ran_num_x= (x*0.25) + r_1;
+            float r_1 = random_1 * (1.0/3.0);
+            ran_num_x= (x*(1.0/3.0)) + r_1;
 
             float random_2 = (float)rand() / (float)RAND_MAX;
-            float r_2 = random_2 * 0.25;
-            ran_num_y= (y*0.25) + r_2;
+            float r_2 = random_2 * (1.0/3.0);
+            ran_num_y= (y*(1.0/3.0)) + r_2;
 
             sub_pc.px = cam->wl+(i+ran_num_x)*du;
             sub_pc.py = cam->wt+(j+ran_num_y)*dv;
