@@ -1,0 +1,14 @@
+A3 report:
+To run the code:
+1. first run compile.sh which compile all the codes
+2. execute ./RayTracer 1024 1 0 a4.ppm
+
+To finish the assignment, I first check out tutorial code, psudo codes are really
+helpful for me get a good start on A3.
+During the A3, I found the most difficult part is the recrsive ray trace.
+In order to the accumulate the color, I have to handle the realtionship among
+the functions rshape, raytrace and findfirsthit. At first, I could not get the 
+correct color, then I spent a lots of time solving this problem. Another things was the
+how to alllocate meomory for object and free them correctly. It often caused segmentaion 
+fault. This assignment is great and I learned a lot about graphical images. I got a deep
+understanding about phong illumination.
